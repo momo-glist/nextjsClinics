@@ -1,0 +1,230 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  ADMIN // Le créateur de la clinique
+  MEDECIN
+  INFIRMIER
+  ADMINISTRATIF
+  AUTRE
+}
+
+enum ModuleNom {
+  PHARMACIE
+  COMPTABILITE
+  LABORATOIRE
+}
+
+enum StatutAgenda {
+  CONFIRME
+  ANNULE
+  EN_ATTENTE
+}
+
+model User {
+  id             String   @id @default(uuid())
+  email          String   @unique
+  nom            String
+  image          String?
+  telephone      String?
+  supabaseUserId String?  @unique // ID utilisateur venant de Supabase Auth
+  createdAt      DateTime @default(now())
+  role           Role     @default(AUTRE)
+
+  cliniqueId String?
+  clinique   Clinique? @relation("UserToClinique", fields: [cliniqueId], references: [id])
+
+  createdClinique Clinique? @relation("CliniqueAdmin")
+
+  invitations   Invitation[]
+  specialites   Specialite[]   @relation("UserSpecialites")
+  soins         Soin[]         @relation("UserSoins")
+  consultations Consultation[]
+  agendas       Agenda[]
+}
+
+model Clinique {
+  id        String  @id @default(uuid())
+  nom       String
+  adresse   String
+  telephone String
+  statut    Boolean @default(true)
+
+  utilisateurId  String @unique
+  administrateur User   @relation("CliniqueAdmin", fields: [utilisateurId], references: [id])
+
+  personnel        User[]            @relation("UserToClinique")
+  invitations      Invitation[]
+  modules          Module[]
+  patients         Patient[]
+  medicaments      Medicament[]
+  stockMedicaments StockMedicament[]
+  historiqueAchats HistoriqueAchat[]
+  ventes           Vente[]
+  comptabilites    Comptabilite[]
+  departements     Departement[]
+}
+
+model Invitation {
+  id          String   @id @default(uuid())
+  email       String
+  role        Role
+  cliniqueId  String
+  clinique    Clinique @relation(fields: [cliniqueId], references: [id])
+  invitedById String
+  invitedBy   User     @relation(fields: [invitedById], references: [id])
+  accepted    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+model Specialite {
+  id          String  @id @default(uuid())
+  nom         String
+  description String?
+
+  // Médecins ayant cette spécialité
+  users User[] @relation("UserSpecialites")
+
+  // Soins liés à cette spécialité
+  soins Soin[]
+}
+
+model Soin {
+  id           String     @id @default(uuid())
+  nom          String
+  description  String?
+  specialiteId String
+  specialite   Specialite @relation(fields: [specialiteId], references: [id])
+
+  // Médecins pratiquant ce soin
+  users User[] @relation("UserSoins")
+
+  consultations Consultation[]
+}
+
+model Module {
+  id         String    @id @default(uuid())
+  nom        ModuleNom
+  actif      Boolean   @default(true)
+  cliniqueId String
+  clinique   Clinique  @relation(fields: [cliniqueId], references: [id], onDelete: Cascade)
+
+  @@unique([nom, cliniqueId])
+}
+
+model Departement {
+  id         String   @id @default(uuid())
+  nom        String
+  cliniqueId String
+  clinique   Clinique @relation(fields: [cliniqueId], references: [id])
+}
+
+model Patient {
+  id             String   @id @default(uuid())
+  nom            String
+  prenom         String
+  date_naissance DateTime
+  telephone      String
+  adresse        String
+  cliniqueId     String
+  clinique       Clinique @relation(fields: [cliniqueId], references: [id])
+
+  consultations Consultation[]
+  agendas       Agenda[]
+}
+
+model Medicament {
+  id          String   @id @default(uuid())
+  nom         String
+  description String
+  prix        Float
+  cliniqueId  String
+  clinique    Clinique @relation(fields: [cliniqueId], references: [id])
+
+  stock            StockMedicament?
+  historiqueAchats HistoriqueAchat[]
+  detailVentes     DetailVente[]
+}
+
+model StockMedicament {
+  id            String     @id @default(uuid())
+  stock_courant Int
+  medicamentId  String     @unique
+  medicament    Medicament @relation(fields: [medicamentId], references: [id])
+  cliniqueId    String
+  clinique      Clinique   @relation(fields: [cliniqueId], references: [id])
+}
+
+model HistoriqueAchat {
+  id            String     @id @default(uuid())
+  date_achat    DateTime
+  quantite      Int
+  prix_unitaire Float
+  medicamentId  String
+  medicament    Medicament @relation(fields: [medicamentId], references: [id])
+  cliniqueId    String
+  clinique      Clinique   @relation(fields: [cliniqueId], references: [id])
+}
+
+model Vente {
+  id           String        @id @default(uuid())
+  date_vente   DateTime
+  total        Float
+  cliniqueId   String
+  clinique     Clinique      @relation(fields: [cliniqueId], references: [id])
+  detailVentes DetailVente[]
+}
+
+model DetailVente {
+  id            String     @id @default(uuid())
+  quantite      Int
+  prix_unitaire Float
+  venteId       String
+  medicamentId  String
+  vente         Vente      @relation(fields: [venteId], references: [id])
+  medicament    Medicament @relation(fields: [medicamentId], references: [id])
+}
+
+model Comptabilite {
+  id         String   @id @default(uuid())
+  mois       Int
+  annee      Int
+  revenu     Float
+  depense    Float
+  cliniqueId String
+  clinique   Clinique @relation(fields: [cliniqueId], references: [id], onDelete: Cascade)
+}
+
+model Consultation {
+  id        String   @id @default(uuid())
+  date      DateTime
+  patientId String
+  userId    String
+  patient   Patient  @relation(fields: [patientId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+  soinId    String
+  soin      Soin     @relation(fields: [soinId], references: [id])
+}
+
+model Agenda {
+  id        String       @id @default(uuid())
+  date      DateTime
+  patientId String
+  userId    String
+  patient   Patient      @relation(fields: [patientId], references: [id])
+  user      User         @relation(fields: [userId], references: [id])
+  statut    StatutAgenda
+}
