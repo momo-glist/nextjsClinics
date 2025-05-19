@@ -27,3 +27,5 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
   }
 }
+
+
