@@ -38,35 +38,35 @@ export async function getUtilisateur(email: string) {
   }
 }
 
-export async function getClinique(email: string) {
+export async function getCliniqueWithModulesAndRole(email: string) {
   try {
-    // Étape 1 : Vérifier si l'utilisateur est administrateur de la clinique
-    const cliniqueViaUtilisateur = await prisma.clinique.findFirst({
-      where: {
-        administrateur: {
-          email: email,
+    // Recherche de l'utilisateur avec sa clinique, modules, et rôle
+    const userWithClinique = await prisma.user.findUnique({
+      where: { email },
+      include: {
+        clinique: {
+          include: {
+            modules: true,
+          },
         },
       },
     });
 
-    if (cliniqueViaUtilisateur) {
-      return cliniqueViaUtilisateur.nom;
-    }
+    if (!userWithClinique) return null;
 
-    // Étape 2 : Vérifier s'il fait partie du personnel
-    const personnel = await prisma.user.findUnique({
-      where: { email },
-      include: { clinique: true },
-    });
+    const nom = userWithClinique.clinique?.nom || null;
+    const modules = userWithClinique.clinique?.modules.map((m) => m.nom) || [];
+    const role = userWithClinique.role;
 
-    if (personnel?.clinique) {
-      return personnel.clinique.nom;
-    }
-
-    // Aucun résultat
-    return null;
+    return {
+      nom,
+      modules,
+      role
+    };
   } catch (error) {
-    console.error("Erreur lors de la récupération de la clinique :", error);
+    console.error("Erreur lors de la récupération de la clinique et modules :", error);
     throw error;
   }
 }
+
+

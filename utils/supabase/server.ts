@@ -6,3 +6,4 @@ const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 export const createClient = () => {
   return createSupabaseClient(supabaseUrl, supabaseKey);
 };
+

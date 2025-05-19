@@ -1,30 +1,25 @@
-import { currentUser } from "@clerk/nextjs/server"; // serveur-side auth
+import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { getUtilisateur } from "./action";
+import prisma from "@/lib/prisma";
 import Wrapper from "./components/Wrapper";
 
-
 export default async function Home() {
-    const user = await currentUser(); // Clerk user
+  const user = await currentUser();
 
-  if (!user || !user.emailAddresses[0]?.emailAddress) {
-    redirect("/sign-in"); // si l'utilisateur n'est pas connecté
-  }
+  if (!user) redirect("/sign-in");
 
-  const email = user.emailAddresses[0].emailAddress;
-  const utilisateur = await getUtilisateur(email);
+  const utilisateur = await prisma.user.findUnique({
+    where: { email: user.emailAddresses[0]?.emailAddress?.toLowerCase() },
+    include: { clinique: true, createdClinique: true },
+  });
 
-  if (!utilisateur) {
-    redirect("/clinique"); // si l'utilisateur n'existe même pas encore
-  }
+  if (!utilisateur || !utilisateur.clinique) redirect("/clinique");
 
-  // Redirection si l'utilisateur n'a pas encore créé de clinique
-  if (!utilisateur.clinique) {
-    redirect("/clinique");
-  }
   return (
     <Wrapper>
       <button className="btn btn-sm btn-primary">test</button>
     </Wrapper>
   );
 }
+
+

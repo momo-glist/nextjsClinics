@@ -9,6 +9,8 @@ interface PersonnelImageProps {
 }
 
 const PersonnelImage : React.FC<PersonnelImageProps> = ({src, alt, heightClass, widthClass}) => {
+  if (!src) return null;
+  
   return (
     <div className='avatar'>
         <div className={` mask mask mask-squircle ${heightClass} ${widthClass}`}>

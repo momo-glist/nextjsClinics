@@ -17,7 +17,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { UserButton, useUser } from "@clerk/nextjs";
 import React, { useEffect, useState } from "react";
-import { checkAndAddUtilisateur, getClinique } from "../action";
+import {
+  checkAndAddUtilisateur,
+  getCliniqueWithModulesAndRole,
+} from "../action";
+import { ModuleNom, Role } from "@prisma/client";
 
 const Sidebar = () => {
   const { user, isLoaded, isSignedIn } = useUser();
@@ -25,52 +29,94 @@ const Sidebar = () => {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [nomClinique, setNomClinique] = useState<string | null>(null);
-
-  const navLinks = [
-    { href: "/", label: "Tableau de bord", icon: LayoutDashboard },
-    { href: "/patients", label: "Patients à consulter", icon: Stethoscope },
-    { href: "/agenda", label: "Rendez-vous", icon: CalendarClock },
-    { href: "/laboratoire", label: "Laboratoire", icon: Microscope },
-    { href: "/soins", label: "Soins", icon: Activity },
-    { href: "/pharmacie", label: "Pharmacie", icon: Cross },
-    { href: "/medicaments", label: "Médicaments", icon: Pill },
-    { href: "/historiqueachat", label: "Historique d'achat", icon: History },
-    { href: "/employee", label: "Employées", icon: History },
-  ];
-
-  const toggleSidebar = () => setIsCollapsed(!isCollapsed);
+  const [modules, setModules] = useState<ModuleNom[]>([]);
+  const [role, setRole] = useState<Role | null>(null);
 
   useEffect(() => {
-    // Appeler getClinique dès que l'email est dispo
     if (email) {
-      getClinique(email)
-        .then((nom) => {
-          setNomClinique(nom);
-          if (nom) {
-            console.log("Nom de la clinique :", nom);
+      getCliniqueWithModulesAndRole(email)
+        .then((result) => {
+          if (result) {
+            const { nom, modules, role } = result;
+            setNomClinique(nom);
+            setModules(modules);
+            setRole(role);
           } else {
-            console.log("Aucune clinique associée à cet email.");
+            setNomClinique(null);
+            setModules([]);
+            setRole(null);
           }
         })
-        .catch((error) => {
-          console.error("Erreur récupération clinique :", error);
-        });
+        .catch(console.error);
     }
   }, [email]);
 
-  useEffect(() => {
-    if (
-      isLoaded &&
-      user &&
-      user.primaryEmailAddress?.emailAddress &&
-      user.fullName
-    ) {
-      checkAndAddUtilisateur(
-        user.primaryEmailAddress.emailAddress,
-        user.fullName
-      );
-    }
-  }, [isLoaded, user]);
+  // Construction dynamique des liens selon le rôle et modules
+  const navLinks = [
+    {
+      href: "/",
+      label: "Tableau de bord",
+      icon: LayoutDashboard,
+      requiredModules: [],
+      allowedRoles: ["ADMIN"],
+    },
+    {
+      href: "/patient",
+      label: "Patients à consulter",
+      icon: Stethoscope,
+      requiredModules: [],
+      allowedRoles: ["ADMIN", "MEDECIN"],
+    },
+    {
+      href: "/agenda",
+      label: "Rendez-vous",
+      icon: CalendarClock,
+      requiredModules: [],
+      allowedRoles: ["ADMIN", "MEDECIN"],
+    },
+    {
+      href: "/laboratoire",
+      label: "Laboratoire",
+      icon: Microscope,
+      requiredModules: ["LABORATOIRE"],
+      allowedRoles: ["ADMIN"],
+    },
+    { href: "/soins", label: "Soins", icon: Activity, requiredModules: [], allowedRoles: ["ADMIN"] },
+    {
+      href: "/pharmacie",
+      label: "Pharmacie",
+      icon: Cross,
+      requiredModules: ["PHARMACIE"],
+      allowedRoles: ["ADMIN"],
+    },
+    {
+      href: "/medicaments",
+      label: "Médicaments",
+      icon: Pill,
+      requiredModules: ["PHARMACIE"],
+      allowedRoles: ["ADMIN"],
+    },
+    {
+      href: "/historiqueachat",
+      label: "Historique d'achat",
+      icon: History,
+      requiredModules: ["COMPTABILITE"],
+      allowedRoles: ["ADMIN"],
+    },
+    {
+      href: "/employee",
+      label: "Employées",
+      icon: History,
+      requiredModules: [],
+      allowedRoles: ["ADMIN"],
+    }, 
+  ];
+
+  const filteredNavLinks = navLinks.filter(({ requiredModules, allowedRoles }) => {
+  const hasModules = requiredModules.every((mod) => modules.includes(mod as ModuleNom));
+  const hasRole = !allowedRoles || allowedRoles.includes(role as Role);
+  return hasModules && hasRole;
+});
 
   return (
     <div
@@ -78,9 +124,8 @@ const Sidebar = () => {
         isCollapsed ? "w-20" : "w-64"
       }`}
     >
-      {/* Partie haute avec menu et liens */}
+      {/* Partie haute */}
       <div>
-        {/* Header avec bouton toggle */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2">
             <Hospital className="w-6 h-6 text-primary" />
@@ -90,7 +135,10 @@ const Sidebar = () => {
               </span>
             )}
           </div>
-          <button onClick={toggleSidebar} className="btn btn-sm btn-ghost">
+          <button
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="btn btn-sm btn-ghost"
+          >
             {isCollapsed ? (
               <ChevronRight size={18} />
             ) : (
@@ -99,9 +147,8 @@ const Sidebar = () => {
           </button>
         </div>
 
-        {/* Liens de navigation */}
         <ul className="space-y-1">
-          {navLinks.map(({ href, label, icon: Icon }) => {
+          {filteredNavLinks.map(({ href, label, icon: Icon }) => {
             const isActive = pathname === href;
             return (
               <li key={href}>
@@ -120,7 +167,7 @@ const Sidebar = () => {
         </ul>
       </div>
 
-      {/* Partie basse avec UserButton */}
+      {/* Partie basse */}
       <div className="mt-4">
         <UserButton afterSignOutUrl="/" />
       </div>

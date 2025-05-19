@@ -66,6 +66,8 @@ model Clinique {
   utilisateurId  String @unique
   administrateur User   @relation("CliniqueAdmin", fields: [utilisateurId], references: [id])
 
+  specialites Specialite[]
+
   personnel        User[]            @relation("UserToClinique")
   invitations      Invitation[]
   modules          Module[]
@@ -79,15 +81,20 @@ model Clinique {
 }
 
 model Invitation {
-  id          String   @id @default(uuid())
-  email       String
-  role        Role
-  cliniqueId  String
-  clinique    Clinique @relation(fields: [cliniqueId], references: [id])
-  invitedById String
-  invitedBy   User     @relation(fields: [invitedById], references: [id])
-  accepted    Boolean  @default(false)
-  createdAt   DateTime @default(now())
+  id           String      @id @default(uuid())
+  email        String
+  nom          String?
+  telephone    String? // idem
+  role         Role
+  specialiteId String?
+  specialite   Specialite? @relation(fields: [specialiteId], references: [id])
+  cliniqueId   String
+  clinique     Clinique    @relation(fields: [cliniqueId], references: [id])
+  invitedById  String
+  invitedBy    User        @relation(fields: [invitedById], references: [id])
+  accepted     Boolean     @default(false)
+  token        String      @unique @default(uuid())
+  createdAt    DateTime    @default(now())
 }
 
 model Specialite {
@@ -95,10 +102,13 @@ model Specialite {
   nom         String
   description String?
 
-  // Médecins ayant cette spécialité
+  cliniqueId String
+  clinique   Clinique @relation(fields: [cliniqueId], references: [id])
+
+  invitations Invitation[]
+
   users User[] @relation("UserSpecialites")
 
-  // Soins liés à cette spécialité
   soins Soin[]
 }
 
@@ -136,7 +146,7 @@ model Patient {
   id             String   @id @default(uuid())
   nom            String
   prenom         String
-  date_naissance DateTime
+  age            Int
   telephone      String
   adresse        String
   cliniqueId     String
@@ -144,6 +154,22 @@ model Patient {
 
   consultations Consultation[]
   agendas       Agenda[]
+
+  parametresVitaux ParametresVitaux[]
+}
+
+model ParametresVitaux {
+  id             String  @id @default(uuid())
+  patientId      String
+  consultationId String?
+
+  patient      Patient       @relation(fields: [patientId], references: [id])
+  consultation Consultation? @relation(fields: [consultationId], references: [id])
+
+  date        DateTime @default(now())
+  temperature Float
+  tension     Float
+  poids       Float
 }
 
 model Medicament {
@@ -217,6 +243,11 @@ model Consultation {
   user      User     @relation(fields: [userId], references: [id])
   soinId    String
   soin      Soin     @relation(fields: [soinId], references: [id])
+
+  parametresVitaux ParametresVitaux[]
+
+  prescription  String
+  fichier   String
 }
 
 model Agenda {
