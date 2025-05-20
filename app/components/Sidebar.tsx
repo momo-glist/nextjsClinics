@@ -12,6 +12,8 @@ import {
   Pill,
   History,
   Hospital,
+  FolderOpen,
+  Users,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -82,6 +84,7 @@ const Sidebar = () => {
       allowedRoles: ["ADMIN"],
     },
     { href: "/soins", label: "Soins", icon: Activity, requiredModules: [], allowedRoles: ["ADMIN"] },
+    { href: "/specialite", label: "Spécialités", icon: FolderOpen, requiredModules: [], allowedRoles: ["ADMIN"] },
     {
       href: "/pharmacie",
       label: "Pharmacie",
@@ -106,7 +109,7 @@ const Sidebar = () => {
     {
       href: "/employee",
       label: "Employées",
-      icon: History,
+      icon: Users,
       requiredModules: [],
       allowedRoles: ["ADMIN"],
     }, 

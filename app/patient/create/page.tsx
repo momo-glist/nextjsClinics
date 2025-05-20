@@ -1,11 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Wrapper from "@/app/components/Wrapper";
 import { toast } from "react-toastify";
+import { Soin } from "@/app/type";
 
 const CreatePatientPage = () => {
   const [loading, setLoading] = useState(false);
+  const [soinsDisponibles, setSoinsDisponibles] = useState<Soin[]>([]);
   const [formData, setFormData] = useState({
     nom: "",
     prenom: "",
@@ -15,10 +17,34 @@ const CreatePatientPage = () => {
     temperature: "",
     tension: "",
     poids: "",
+    soins: [] as string[],
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  // Charger les soins disponibles depuis l'API
+  useEffect(() => {
+    const fetchSoins = async () => {
+      try {
+        const res = await fetch("/api/soins");
+        const data = await res.json();
+        setSoinsDisponibles(data);
+      } catch (error) {
+        console.error("Erreur lors du chargement des soins", error);
+      }
+    };
+
+    fetchSoins();
+  }, []);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+
+    if (name === "soins") {
+      const options = (e.target as HTMLSelectElement).selectedOptions;
+      const selected = Array.from(options).map((option) => option.value);
+      setFormData({ ...formData, soins: selected });
+    } else {
+      setFormData({ ...formData, [name]: value });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -26,8 +52,8 @@ const CreatePatientPage = () => {
     setLoading(true);
 
     try {
-      // 1. Création du patient
-      const patientRes = await fetch("/api/patient", {
+      // 1. Création du patient, agenda, facture
+      const patientRes = await fetch("/api/patients", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -35,26 +61,25 @@ const CreatePatientPage = () => {
         body: JSON.stringify({
           nom: formData.nom,
           prenom: formData.prenom,
-          date_naissance: new Date(formData.date_naissance),
+          age: new Date().getFullYear() - new Date(formData.date_naissance).getFullYear(),
           telephone: formData.telephone,
           adresse: formData.adresse,
+          soins: formData.soins,
         }),
       });
 
-      if (!patientRes.ok)
-        throw new Error("Erreur lors de la création du patient");
+      if (!patientRes.ok) throw new Error("Erreur création patient");
 
-      const patientData = await patientRes.json();
-      const patientId = patientData.id;
+      const { patient } = await patientRes.json();
 
-      // 2. Création des paramètres vitaux
+      // 2. Enregistrement des paramètres vitaux
       const vitauxRes = await fetch("/api/parametres-vitaux", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          patientId,
+          patientId: patient.id,
           temperature: parseFloat(formData.temperature),
           tension: formData.tension,
           poids: parseFloat(formData.poids),
@@ -62,11 +87,9 @@ const CreatePatientPage = () => {
       });
 
       if (!vitauxRes.ok)
-        throw new Error(
-          "Erreur lors de l’enregistrement des paramètres vitaux"
-        );
+        throw new Error("Erreur enregistrement paramètres vitaux");
 
-      toast.success("Patient et paramètres vitaux enregistrés avec succès");
+      toast.success("Patient, agenda et facture enregistrés avec succès");
 
       // Reset
       setFormData({
@@ -78,9 +101,10 @@ const CreatePatientPage = () => {
         temperature: "",
         tension: "",
         poids: "",
+        soins: [],
       });
     } catch (error) {
-      toast.error("Une erreur est survenue");
+      toast.error("Erreur pendant l’enregistrement");
       console.error(error);
     } finally {
       setLoading(false);
@@ -91,7 +115,7 @@ const CreatePatientPage = () => {
     <Wrapper>
       <div className="max-w-3xl mx-auto mt-10">
         <h2 className="text-2xl font-bold mb-6">
-          Ajouter un patient + paramètres vitaux
+          Ajouter un patient + soins + paramètres vitaux
         </h2>
         <form
           className="grid grid-cols-1 md:grid-cols-2 gap-4"
@@ -170,6 +194,22 @@ const CreatePatientPage = () => {
             onChange={handleChange}
             required
           />
+
+          <select
+            name="soins"
+            multiple
+            className="select select-bordered w-full col-span-full"
+            value={formData.soins}
+            onChange={handleChange}
+            required
+          >
+            {soinsDisponibles.map((soin) => (
+              <option key={soin.id} value={soin.id}>
+                {soin.nom} - {soin.prix} FCFA
+              </option>
+            ))}
+          </select>
+
           <div className="col-span-full">
             <button
               className="btn btn-primary w-full"

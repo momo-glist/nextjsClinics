@@ -30,6 +30,7 @@ enum ModuleNom {
 
 enum StatutAgenda {
   CONFIRME
+  PAYE
   ANNULE
   EN_ATTENTE
 }
@@ -78,6 +79,7 @@ model Clinique {
   ventes           Vente[]
   comptabilites    Comptabilite[]
   departements     Departement[]
+  factures Facture[]
 }
 
 model Invitation {
@@ -116,6 +118,7 @@ model Soin {
   id           String     @id @default(uuid())
   nom          String
   description  String?
+  prix         Float?
   specialiteId String
   specialite   Specialite @relation(fields: [specialiteId], references: [id])
 
@@ -123,6 +126,7 @@ model Soin {
   users User[] @relation("UserSoins")
 
   consultations Consultation[]
+  detailsFacture DetailFacture[] 
 }
 
 model Module {
@@ -143,19 +147,20 @@ model Departement {
 }
 
 model Patient {
-  id             String   @id @default(uuid())
-  nom            String
-  prenom         String
-  age            Int
-  telephone      String
-  adresse        String
-  cliniqueId     String
-  clinique       Clinique @relation(fields: [cliniqueId], references: [id])
+  id         String   @id @default(uuid())
+  nom        String
+  prenom     String
+  age        Int
+  telephone  String
+  adresse    String
+  cliniqueId String
+  clinique   Clinique @relation(fields: [cliniqueId], references: [id])
 
   consultations Consultation[]
   agendas       Agenda[]
 
   parametresVitaux ParametresVitaux[]
+  Facture          Facture[]
 }
 
 model ParametresVitaux {
@@ -180,9 +185,10 @@ model Medicament {
   cliniqueId  String
   clinique    Clinique @relation(fields: [cliniqueId], references: [id])
 
-  stock            StockMedicament?
-  historiqueAchats HistoriqueAchat[]
-  detailVentes     DetailVente[]
+  stock              StockMedicament?
+  historiqueAchats   HistoriqueAchat[]
+  detailVentes       DetailVente[]
+  DetailPrescription DetailPrescription[]
 }
 
 model StockMedicament {
@@ -239,15 +245,71 @@ model Consultation {
   date      DateTime
   patientId String
   userId    String
-  patient   Patient  @relation(fields: [patientId], references: [id])
-  user      User     @relation(fields: [userId], references: [id])
   soinId    String
-  soin      Soin     @relation(fields: [soinId], references: [id])
+
+  patient Patient @relation(fields: [patientId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+  soin    Soin    @relation(fields: [soinId], references: [id])
 
   parametresVitaux ParametresVitaux[]
 
-  prescription  String
-  fichier   String
+  prescription Prescription? // relation vers Prescription
+
+  fichier String?
+
+  // Relation 1:1 vers Facture (clé étrangère dans Consultation)
+  facture   Facture? @relation("ConsultationFacture", fields: [factureId], references: [id])
+  factureId String?  @unique
+}
+
+model Prescription {
+  id             String       @id @default(uuid())
+  consultationId String       @unique
+  consultation   Consultation @relation(fields: [consultationId], references: [id])
+  date           DateTime     @default(now())
+  remarque       String? // remarque générale du médecin
+
+  details DetailPrescription[]
+}
+
+model DetailPrescription {
+  id             String  @id @default(uuid())
+  prescriptionId String
+  medicamentId   String
+  quantite       Int
+  duree          String? // facultatif : "5 jours", "2 semaines"
+  frequence      String? // "2 fois par jour", etc.
+
+  prescription Prescription @relation(fields: [prescriptionId], references: [id])
+  medicament   Medicament   @relation(fields: [medicamentId], references: [id])
+}
+
+model Facture {
+  id         String           @id @default(uuid())
+  patientId  String
+  cliniqueId String           // pour récupérer nom, adresse, téléphone
+  date       DateTime         @default(now())
+
+  agendaId   String?          @unique
+  agenda     Agenda?          @relation("AgendaFacture", fields: [agendaId], references: [id])
+
+  consultation Consultation?  @relation("ConsultationFacture")
+
+  patient    Patient          @relation(fields: [patientId], references: [id])
+  clinique   Clinique         @relation(fields: [cliniqueId], references: [id])
+
+  details    DetailFacture[]  // plusieurs soins facturés
+  prix       Float
+}
+
+model DetailFacture {
+  id         String   @id @default(uuid())
+  factureId  String
+  soinId     String
+  prix       Float    // prix au moment de la facturation
+
+  facture    Facture  @relation(fields: [factureId], references: [id])
+  soin       Soin     @relation(fields: [soinId], references: [id])
 }
 
 model Agenda {
@@ -255,7 +317,12 @@ model Agenda {
   date      DateTime
   patientId String
   userId    String
-  patient   Patient      @relation(fields: [patientId], references: [id])
-  user      User         @relation(fields: [userId], references: [id])
   statut    StatutAgenda
+
+  patient Patient @relation(fields: [patientId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+
+  // Relation inverse 1:1 vers Facture (pas de fields/references ici)
+  facture   Facture? @relation("AgendaFacture")
+  factureId String?
 }

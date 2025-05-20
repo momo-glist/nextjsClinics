@@ -40,3 +40,17 @@ export interface Role {
   id: string;
   nom: string;
 };
+
+export interface Specialite {
+  id: string;
+  nom: string;
+  description: string
+}
+
+export interface Soin {
+  id: string;
+  nom: string;
+  description: string;
+  specialite: Specialite | null;
+  prix: string
+}
