@@ -10,7 +10,7 @@ export async function POST(req: Request) {
     if (
       !patientId ||
       typeof temperature !== 'number' ||
-      typeof tension !== 'number' ||
+      !tension ||
       typeof poids !== 'number'
     ) {
       return NextResponse.json(

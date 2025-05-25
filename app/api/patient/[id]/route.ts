@@ -3,46 +3,61 @@ import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 
 // Params contient l'ID du patient dans l'URL : /api/patients/[id]
-export async function GET(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
-    const { userId } = await auth()
+    const { id } = params;
+    const { userId } = await auth();
 
     if (!userId) {
-      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
+      return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { supabaseUserId: userId },
-      select: { cliniqueId: true },
-    })
+    // Trouver l'utilisateur connecté avec clinique
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { supabaseUserId: userId },
+          { id: userId }
+        ]
+      },
+      select: {
+        cliniqueId: true,
+        role: true,
+      }
+    });
 
     if (!user || !user.cliniqueId) {
-      return NextResponse.json(
-        { error: 'Clinique non trouvée pour cet utilisateur' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: "Clinique introuvable pour l'utilisateur" }, { status: 400 });
     }
 
+    // Vérifier que le patient appartient à la même clinique
     const patient = await prisma.patient.findFirst({
       where: {
-        id: params.id,
-        cliniqueId: user.cliniqueId, // Sécurité : on vérifie bien que ce patient appartient à cette clinique
+        id: id,
+        cliniqueId: user.cliniqueId,
       },
       include: {
-        parametresVitaux: true, // Tu peux l’enlever si tu ne veux pas ces infos
+        parametresVitaux: true,
+        agendas: {
+          include: {
+            agendaSoins: {
+              include: {
+                soin: true,
+              },
+            },
+          },
+        },
       },
-    })
+    });
 
     if (!patient) {
-      return NextResponse.json({ error: 'Patient non trouvé' }, { status: 404 })
+      return NextResponse.json({ error: "Patient non trouvé ou accès interdit" }, { status: 404 });
     }
 
-    return NextResponse.json(patient, { status: 200 })
+    return NextResponse.json(patient, { status: 200 });
+
   } catch (error) {
-    console.error('Erreur récupération patient:', error)
-    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
+    console.error("Erreur lors de la récupération du patient :", error);
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }

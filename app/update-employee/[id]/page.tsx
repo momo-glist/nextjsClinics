@@ -17,25 +17,56 @@ const Page = () => {
 
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [specialitesList, setSpecialitesList] = useState<
+    { id: number; nom: string }[]
+  >([]);
   const [formData, setFormData] = useState<UpdatePersonnelPayload>({
     id: "",
     personnelEmail: "",
     telephone: "",
     role: "MEDECIN",
     nom: "",
-    motdepasse: "",
     specialiteNom: "",
     image: "",
   });
+
+  useEffect(() => {
+    const fetchSpecialites = async () => {
+      try {
+        const res = await fetch("/api/specialite");
+        if (!res.ok) throw new Error("Erreur chargement spécialités");
+        const data = await res.json();
+        setSpecialitesList(data);
+      } catch (error) {
+        console.error(error);
+        toast.error("Erreur lors du chargement des spécialités");
+      }
+    };
+    fetchSpecialites();
+  }, []);
 
   // 🔄 Récupération des données employé
   useEffect(() => {
     const fetchPersonnel = async () => {
       try {
-        const res = await fetch(`/api/personnel/${personnelId}?email=${email}`);
+        const res = await fetch(`/api/employee/${personnelId}`);
         if (!res.ok) throw new Error("Erreur lors du chargement");
         const data = await res.json();
-        setFormData(data);
+
+        setFormData((prev) => ({
+          ...prev,
+          id: data.id,
+          nom: data.nom || "",
+          personnelEmail: data.email || "",
+          telephone: data.telephone || "",
+          role: data.role || "MEDECIN",
+          specialiteNom:
+            data.specialites && data.specialites.length > 0
+              ? data.specialites[0].nom
+              : "", // récupère le nom de la 1ère spécialité ou vide
+          image: data.image || "",
+        }));
+
         if (data.image) {
           setPreviewUrl(data.image);
         }
@@ -44,8 +75,15 @@ const Page = () => {
         toast.error("Erreur lors du chargement de l'employé");
       }
     };
+
     if (personnelId) fetchPersonnel();
   }, [personnelId]);
+
+  useEffect(() => {
+    if (formData.role !== "MEDECIN") {
+      setFormData((prev) => ({ ...prev, specialiteNom: "" }));
+    }
+  }, [formData.role]);
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -84,7 +122,7 @@ const Page = () => {
         imagePath = uploadRes.path;
       }
 
-      const response = await fetch(`/api/personnel/${personnelId}`, {
+      const response = await fetch(`/api/employee/${personnelId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -121,7 +159,7 @@ const Page = () => {
               type="text"
               name="personnelEmail"
               value={formData.personnelEmail}
-              readOnly
+              onChange={handleChange}
               className="input input-bordered w-full mb-4"
             />
             <div className="text-sm font-semibold mb-2">Téléphone</div>
@@ -129,7 +167,7 @@ const Page = () => {
               type="text"
               name="telephone"
               value={formData.telephone}
-              readOnly
+              onChange={handleChange}
               className="input input-bordered w-full mb-4"
             />
             <div className="text-sm font-semibold mb-2">Rôle</div>
@@ -146,14 +184,19 @@ const Page = () => {
             </select>
 
             {formData.role === "MEDECIN" && (
-              <input
-                type="text"
+              <select
                 name="specialiteNom"
                 value={formData.specialiteNom}
                 onChange={handleChange}
                 className="input input-bordered w-full mb-4"
-                placeholder="Spécialité"
-              />
+              >
+                <option value="">Choisir une spécialité</option>
+                {specialitesList.map((spec) => (
+                  <option key={spec.id} value={spec.nom}>
+                    {spec.nom}
+                  </option>
+                ))}
+              </select>
             )}
 
             <input

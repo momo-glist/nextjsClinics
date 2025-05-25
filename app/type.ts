@@ -1,3 +1,5 @@
+import { JSX } from "react";
+
 export interface Personnel {
   id: string;
   nom: string;
@@ -26,7 +28,6 @@ export interface UpdatePersonnelPayload {
   telephone: string;
   role: "MEDECIN" | "INFIRMIER" | "ADMINISTRATIF";
   nom: string;
-  motdepasse: string;
   specialiteNom?: string;
   image: string;
 };
@@ -54,3 +55,40 @@ export interface Soin {
   specialite: Specialite | null;
   prix: string
 }
+
+export interface Clinique {
+  nom: string;
+  telephone: string;
+  adresse: string;
+  id: string;
+  statut: boolean;
+  utilisateurId: string;
+};
+
+export interface Agenda  {
+  date: string;
+  statut: string;
+  agendaSoins: {
+    soin: {
+      nom: string;
+    };
+  }[];
+};
+
+export interface Patient  {
+  id: string,
+  nom: string;
+  prenom: string;
+  agendas: Agenda[];
+};
+
+export interface RendezVousAffiche  {
+  jour: string;
+  heure: string;
+  patient: string;
+  type: string;
+  couleur: string;
+  icone: JSX.Element;
+  patientId: string;
+};
+

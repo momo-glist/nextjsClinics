@@ -67,7 +67,14 @@ const Sidebar = () => {
       label: "Patients à consulter",
       icon: Stethoscope,
       requiredModules: [],
-      allowedRoles: ["ADMIN", "MEDECIN"],
+      allowedRoles: ["ADMIN", "MEDECIN", "INFIRMIER"],
+    },
+    {
+      href: "/patient/create",
+      label: "Ajouter un patient",
+      icon: Stethoscope,
+      requiredModules: [],
+      allowedRoles: ["INFIRMIER"],
     },
     {
       href: "/agenda",

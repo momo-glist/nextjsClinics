@@ -112,6 +112,8 @@ model Specialite {
   users User[] @relation("UserSpecialites")
 
   soins Soin[]
+
+  @@unique([nom, cliniqueId]) // ✅ Ajouté ici
 }
 
 model Soin {
@@ -127,6 +129,8 @@ model Soin {
 
   consultations Consultation[]
   detailsFacture DetailFacture[] 
+
+  agendaSoins AgendaSoin[]
 }
 
 model Module {
@@ -173,7 +177,7 @@ model ParametresVitaux {
 
   date        DateTime @default(now())
   temperature Float
-  tension     Float
+  tension     String
   poids       Float
 }
 
@@ -322,7 +326,18 @@ model Agenda {
   patient Patient @relation(fields: [patientId], references: [id])
   user    User    @relation(fields: [userId], references: [id])
 
-  // Relation inverse 1:1 vers Facture (pas de fields/references ici)
   facture   Facture? @relation("AgendaFacture")
   factureId String?
+
+  agendaSoins AgendaSoin[]
+}
+
+model AgendaSoin {
+  id        String  @id @default(uuid())
+  agenda    Agenda  @relation(fields: [agendaId], references: [id])
+  agendaId  String
+  soin      Soin    @relation(fields: [soinId], references: [id])
+  soinId    String
+
+  @@unique([agendaId, soinId]) // empêche les doublons
 }

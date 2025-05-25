@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 
 export async function POST(req: Request) {
   try {
@@ -20,7 +21,39 @@ export async function POST(req: Request) {
       );
     }
 
-    // Récupérer l'utilisateur lié au userId de Clerk
+    // Vérifier que chaque soin a bien un id et un prix
+    for (const soin of soins) {
+      if (!soin.id || typeof soin.prix !== "number") {
+        return NextResponse.json(
+          {
+            error:
+              "Chaque soin doit contenir un id et un prix numérique valide.",
+          },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Vérifier que les IDs de soins existent dans la base
+    const existingSoins = await prisma.soin.findMany({
+      where: {
+        id: { in: soins.map((s: any) => s.id) },
+      },
+      select: { id: true },
+    });
+
+    const existingIds = existingSoins.map((s) => s.id);
+    const invalidIds = soins.filter((s: any) => !existingIds.includes(s.id));
+    if (invalidIds.length > 0) {
+      return NextResponse.json(
+        {
+          error: `Soins inexistants: ${invalidIds.map((s: any) => s.id).join(", ")}`,
+        },
+        { status: 400 }
+      );
+    }
+
+    // Récupérer la clinique liée à l'utilisateur
     const user = await prisma.user.findUnique({
       where: { supabaseUserId: userId },
       select: {
@@ -28,6 +61,11 @@ export async function POST(req: Request) {
         clinique: {
           select: {
             id: true,
+            nom: true,
+            telephone: true,
+            adresse: true,
+            statut: true,
+            utilisateurId: true,
           },
         },
       },
@@ -64,36 +102,26 @@ export async function POST(req: Request) {
         statut: "EN_ATTENTE",
       },
     });
-
-    // Calculer le prix total des soins
-    // Calculer les détails des soins avec les prix
-    const soinsDetails = await prisma.soin.findMany({
-      where: { id: { in: soins } },
-      select: {
-        id: true,
-        prix: true,
-      },
+    // Lier les soins à l’agenda via AgendaSoin
+    await prisma.agendaSoin.createMany({
+      data: soins.map((soin: any) => ({
+        agendaId: agenda.id,
+        soinId: soin.id,
+      })),
     });
 
-    // Calcul total avec gestion de `null`
-    const totalPrix = soinsDetails.reduce(
-      (sum, soin) => sum + (soin.prix ?? 0),
+    // Calculer le total personnalisé
+    const totalPrix = soins.reduce(
+      (sum: number, soin: any) => sum + soin.prix,
       0
     );
 
-    // Préparer les détails pour la facture
-    const detailsData = soinsDetails.map((soin) => {
-      if (soin.prix === null || soin.prix === undefined) {
-        throw new Error(`Le soin avec l'ID ${soin.id} n'a pas de prix défini.`);
-      }
+    const detailsData = soins.map((soin: any) => ({
+      soinId: soin.id,
+      prix: soin.prix,
+    }));
 
-      return {
-        soinId: soin.id,
-        prix: soin.prix,
-      };
-    });
-
-    // Créer la facture avec les détails correctement typés
+    // Créer la facture
     const facture = await prisma.facture.create({
       data: {
         patientId: patient.id,
@@ -110,7 +138,8 @@ export async function POST(req: Request) {
       },
     });
 
-    return NextResponse.json({ patient, agenda, facture }, { status: 201 });
+    // Retourner directement le PDF dans la réponse
+    return NextResponse.json({ patient });
   } catch (error) {
     console.error("Erreur création patient:", error);
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
@@ -126,9 +155,22 @@ export async function GET() {
     }
 
     // Récupérer la clinique de l'utilisateur connecté
-    const user = await prisma.user.findUnique({
-      where: { supabaseUserId: userId },
-      select: { cliniqueId: true },
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { supabaseUserId: userId },
+          { id: userId }
+        ],
+      },
+      select: {
+        cliniqueId: true,
+        role: true,
+        specialites: {
+          select: {
+            id: true,
+          },
+        },
+      },
     });
 
     if (!user || !user.cliniqueId) {
@@ -138,22 +180,105 @@ export async function GET() {
       );
     }
 
-    // Récupérer tous les patients liés à la clinique
-    const patients = await prisma.patient.findMany({
-      where: {
-        cliniqueId: user.cliniqueId,
-      },
-      include: {
-        parametresVitaux: true,
-      },
-      orderBy: {
-        nom: "asc",
-      },
-    });
+    // Récupérer les patients avec leurs agendas EN_ATTENTE et les soins associés
+    let patients;
+
+    if (
+      user.role === "ADMIN" ||
+      user.role === "INFIRMIER" ||
+      user.role === "ADMINISTRATIF"
+    ) {
+      // Tous les patients avec agenda en attente
+      patients = await prisma.patient.findMany({
+        where: {
+          cliniqueId: user.cliniqueId,
+          agendas: {
+            some: {
+              statut: "EN_ATTENTE",
+            },
+          },
+        },
+        orderBy: {
+          nom: "asc",
+        },
+        include: {
+          parametresVitaux: true,
+          agendas: {
+            where: {
+              statut: "EN_ATTENTE",
+            },
+            include: {
+              agendaSoins: {
+                include: {
+                  soin: true,
+                },
+              },
+            },
+          },
+        },
+      });
+    } else if (user.role === "MEDECIN") {
+      const specialiteIds = user.specialites.map((s) => s.id);
+
+      patients = await prisma.patient.findMany({
+        where: {
+          cliniqueId: user.cliniqueId,
+          agendas: {
+            some: {
+              statut: "EN_ATTENTE",
+              agendaSoins: {
+                some: {
+                  soin: {
+                    specialiteId: {
+                      in: specialiteIds,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        orderBy: {
+          nom: "asc",
+        },
+        include: {
+          parametresVitaux: true,
+          agendas: {
+            where: {
+              statut: "EN_ATTENTE",
+              agendaSoins: {
+                some: {
+                  soin: {
+                    specialiteId: {
+                      in: specialiteIds,
+                    },
+                  },
+                },
+              },
+            },
+            include: {
+              agendaSoins: {
+                include: {
+                  soin: true,
+                },
+              },
+            },
+          },
+        },
+      });
+    } else {
+      return NextResponse.json(
+        { error: "Rôle non autorisé à voir les patients." },
+        { status: 403 }
+      );
+    }
 
     return NextResponse.json(patients, { status: 200 });
   } catch (error) {
-    console.error("Erreur récupération patients:", error);
+    console.error(
+      "Erreur récupération patients avec agendas en attente:",
+      error
+    );
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }

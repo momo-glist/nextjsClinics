@@ -1,22 +1,121 @@
-import React from "react";
+"use client";
+
+import React, { useEffect, useState } from "react";
 import Wrapper from "../components/Wrapper";
 import { Stethoscope, BadgeCheck, Syringe, Baby } from "lucide-react";
+import { Patient, RendezVousAffiche } from "../type";
+import Link from "next/link";
 
-const rendezVous = [
-  { jour: "Lundi", heure: "09:00", patient: "Lea Martin", type: "Consultation", couleur: "bg-blue-100", icone: <Stethoscope className="w-4 h-4 text-blue-700" /> },
-  { jour: "Mardi", heure: "11:00", patient: "Celine Bernard", type: "Prévention", couleur: "bg-yellow-100", icone: <BadgeCheck className="w-4 h-4 text-yellow-700" /> },
-  { jour: "Lundi", heure: "14:00", patient: "Jean Dubois", type: "Gynécologie", couleur: "bg-purple-100", icone: <Stethoscope className="w-4 h-4 text-purple-700" /> },
-  { jour: "Lundi", heure: "15:00", patient: "Nicolas Lefevre", type: "Suivi", couleur: "bg-green-100", icone: <Syringe className="w-4 h-4 text-green-700" /> },
-  { jour: "Vendredi", heure: "16:00", patient: "Paul Lambert", type: "Accouchement", couleur: "bg-red-100", icone: <Baby className="w-4 h-4 text-red-700" /> },
+const jours = [
+  "Dimanche",
+  "Lundi",
+  "Mardi",
+  "Mercredi",
+  "Jeudi",
+  "Vendredi",
+  "Samedi",
 ];
-
-const jours = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
 const heures = Array.from({ length: 11 }, (_, i) => {
   const h = 8 + i;
   return `${h.toString().padStart(2, "0")}:00`;
 });
 
+// Couleurs aléatoires DaisyUI
+const couleursDaisy = [
+  "bg-blue-100",
+  "bg-green-100",
+  "bg-purple-100",
+  "bg-indigo-100",
+  "bg-emerald-100",
+  "bg-sky-100",
+  "bg-rose-100",
+  "bg-orange-100",
+];
+
+// Fonction qui retourne l’icône et la couleur selon le soin
+const getSoinStyle = (type: string) => {
+  if (type.includes("Accouchement")) {
+    return {
+      couleur: "bg-pink-100",
+      icone: <Baby className="w-4 h-4 text-pink-700" />,
+    };
+  }
+  if (type.includes("Vaccination")) {
+    return {
+      couleur: "bg-yellow-100",
+      icone: <Syringe className="w-4 h-4 text-yellow-700" />,
+    };
+  }
+  if (type.includes("Échographie")) {
+    return {
+      couleur: "bg-purple-100",
+      icone: <BadgeCheck className="w-4 h-4 text-purple-700" />,
+    };
+  }
+
+  const couleurAleatoire =
+    couleursDaisy[Math.floor(Math.random() * couleursDaisy.length)];
+  return {
+    couleur: couleurAleatoire,
+    icone: <Stethoscope className="w-4 h-4 text-blue-700" />,
+  };
+};
+
 const AgendaPage = () => {
+  const [rendezVous, setRendezVous] = useState<RendezVousAffiche[]>([]);
+
+  useEffect(() => {
+    async function fetchAgendas() {
+      try {
+        const res = await fetch("/api/patient");
+
+        if (!res.ok) {
+          const error = await res.json();
+          console.error("Erreur API :", error);
+          return;
+        }
+
+        const data = await res.json();
+
+        if (!Array.isArray(data)) {
+          console.error("La réponse attendue n'est pas un tableau :", data);
+          return;
+        }
+
+        const rdvs: RendezVousAffiche[] = [];
+
+        data.forEach((patient: Patient) => {
+          patient.agendas.forEach((agenda) => {
+            if (agenda.statut === "EN_ATTENTE") {
+              const date = new Date(agenda.date);
+              const typesDeSoin = agenda.agendaSoins.map((a) => a.soin.nom);
+              const type = typesDeSoin.join(", ") || "Consultation";
+              const { couleur, icone } = getSoinStyle(
+                typesDeSoin[0] || "Consultation"
+              );
+
+              rdvs.push({
+                jour: jours[date.getDay()],
+                heure: `${date.getHours().toString().padStart(2, "0")}:00`,
+                patient: `${patient.prenom} ${patient.nom}`,
+                type,
+                couleur,
+                icone,
+                patientId: patient.id,
+              });
+            }
+          });
+        });
+
+        setRendezVous(rdvs);
+      } catch (error) {
+        console.error("Erreur fetchAgendas :", error);
+      }
+    }
+
+    fetchAgendas();
+  }, []);
+
   return (
     <Wrapper>
       <h1 className="text-3xl font-bold mb-6">Agenda hebdomadaire</h1>
@@ -38,17 +137,25 @@ const AgendaPage = () => {
               <tr key={heure} className="hover">
                 <td className="font-semibold text-sm">{heure}</td>
                 {jours.map((jour) => {
-                  const rdv = rendezVous.find((r) => r.heure === heure && r.jour === jour);
+                  const rdv = rendezVous.find(
+                    (r) => r.heure === heure && r.jour === jour
+                  );
                   return (
                     <td key={`${jour}-${heure}`} className="align-top">
                       {rdv ? (
-                        <div className={`rounded-xl p-3 ${rdv.couleur} shadow-sm`}>
-                          <div className="flex items-center gap-2 font-medium mb-1">
-                            {rdv.icone}
-                            <span className="text-sm">{rdv.type}</span>
+                        <Link href={`/patient/${rdv.patientId}`}>
+                          <div
+                            className={`rounded-xl p-3 ${rdv.couleur} shadow-sm cursor-pointer hover:shadow-md transition`}
+                          >
+                            <div className="flex items-center gap-2 font-medium mb-1">
+                              {rdv.icone}
+                              <span className="text-sm">{rdv.type}</span>
+                            </div>
+                            <div className="text-xs text-gray-700">
+                              {rdv.patient}
+                            </div>
                           </div>
-                          <div className="text-xs text-gray-700">{rdv.patient}</div>
-                        </div>
+                        </Link>
                       ) : (
                         <div className="text-xs text-gray-300 italic"></div>
                       )}
@@ -65,4 +172,3 @@ const AgendaPage = () => {
 };
 
 export default AgendaPage;
-

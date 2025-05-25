@@ -69,7 +69,7 @@ export async function GET() {
 
     // Récupérer l'utilisateur et sa clinique
     const currentUser = await prisma.user.findUnique({
-      where: { id: userId },
+      where: { supabaseUserId: userId },
       select: {
         id: true,
         clinique: {
@@ -114,7 +114,6 @@ export async function GET() {
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }
-
 
 export async function PUT(req: Request) {
   try {
