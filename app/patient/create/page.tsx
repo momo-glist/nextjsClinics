@@ -12,7 +12,7 @@ import { getUtilisateur } from "@/app/action";
 import { Clinique } from "@/app/type";
 
 const CreatePatientPage = () => {
-  const { user, isLoaded, isSignedIn } = useUser();
+  const { user } = useUser();
   const email = user?.primaryEmailAddress?.emailAddress as string | undefined;
   const [loading, setLoading] = useState(false);
   const [soinsDisponibles, setSoinsDisponibles] = useState<Soin[]>([]);

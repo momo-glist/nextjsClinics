@@ -192,7 +192,6 @@ model Medicament {
   stock              StockMedicament?
   historiqueAchats   HistoriqueAchat[]
   detailVentes       DetailVente[]
-  DetailPrescription DetailPrescription[]
 }
 
 model StockMedicament {
@@ -271,21 +270,7 @@ model Prescription {
   consultationId String       @unique
   consultation   Consultation @relation(fields: [consultationId], references: [id])
   date           DateTime     @default(now())
-  remarque       String? // remarque générale du médecin
-
-  details DetailPrescription[]
-}
-
-model DetailPrescription {
-  id             String  @id @default(uuid())
-  prescriptionId String
-  medicamentId   String
-  quantite       Int
-  duree          String? // facultatif : "5 jours", "2 semaines"
-  frequence      String? // "2 fois par jour", etc.
-
-  prescription Prescription @relation(fields: [prescriptionId], references: [id])
-  medicament   Medicament   @relation(fields: [medicamentId], references: [id])
+  remarque       String?      // suffit pour noter les prescriptions en texte libre
 }
 
 model Facture {

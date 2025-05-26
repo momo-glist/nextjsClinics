@@ -1,39 +1,39 @@
-import { auth } from '@clerk/nextjs/server'
-import { NextResponse } from 'next/server'
-import prisma from '@/lib/prisma'
+import { auth } from '@clerk/nextjs/server';
+import { NextResponse, NextRequest } from 'next/server';
+import prisma from '@/lib/prisma';
 
-// Params contient l'ID du patient dans l'URL : /api/patients/[id]
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest) {
   try {
-    const { id } = params;
+    // ✅ Extraire l'ID du patient depuis l'URL
+    const url = request.nextUrl;
+    const id = url.pathname.split('/').pop(); // ou utilise RegExp si besoin
+
     const { userId } = await auth();
 
     if (!userId) {
       return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
     }
 
-    // Trouver l'utilisateur connecté avec clinique
     const user = await prisma.user.findFirst({
       where: {
         OR: [
           { supabaseUserId: userId },
-          { id: userId }
-        ]
+          { id: userId },
+        ],
       },
       select: {
         cliniqueId: true,
         role: true,
-      }
+      },
     });
 
     if (!user || !user.cliniqueId) {
       return NextResponse.json({ error: "Clinique introuvable pour l'utilisateur" }, { status: 400 });
     }
 
-    // Vérifier que le patient appartient à la même clinique
     const patient = await prisma.patient.findFirst({
       where: {
-        id: id,
+        id: id!,
         cliniqueId: user.cliniqueId,
       },
       include: {
@@ -61,3 +61,4 @@ export async function GET(request: Request, { params }: { params: { id: string }
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }
+

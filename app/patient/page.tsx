@@ -15,6 +15,16 @@ const jours = [
   "Vendredi",
   "Samedi",
 ];
+
+// 🔁 Fonction pour faire commencer la semaine par le jour actuel
+const rotateDays = (days: string[]) => {
+  const today = new Date().getDay(); // 0 = Dimanche
+  return [...days.slice(today), ...days.slice(0, today)];
+};
+
+const joursRotates = rotateDays(jours);
+
+// Heures entre 08h00 et 18h00
 const heures = Array.from({ length: 11 }, (_, i) => {
   const h = 8 + i;
   return `${h.toString().padStart(2, "0")}:00`;
@@ -32,7 +42,7 @@ const couleursDaisy = [
   "bg-orange-100",
 ];
 
-// Fonction qui retourne l’icône et la couleur selon le soin
+// Fonction pour obtenir la couleur et l’icône du soin
 const getSoinStyle = (type: string) => {
   if (type.includes("Accouchement")) {
     return {
@@ -84,10 +94,24 @@ const AgendaPage = () => {
 
         const rdvs: RendezVousAffiche[] = [];
 
+        // 🗓️ Définir les bornes de la semaine en cours (lundi à dimanche)
+        const now = new Date();
+        const day = now.getDay(); // 0 (dimanche) à 6 (samedi)
+        const diffToMonday = (day + 6) % 7; // ex: lundi = 1 -> 1, dimanche = 0 -> 6
+        const monday = new Date(now);
+        monday.setDate(now.getDate() - diffToMonday);
+        monday.setHours(0, 0, 0, 0);
+
+        const sunday = new Date(monday);
+        sunday.setDate(monday.getDate() + 6);
+        sunday.setHours(23, 59, 59, 999);
+
         data.forEach((patient: Patient) => {
           patient.agendas.forEach((agenda) => {
-            if (agenda.statut === "EN_ATTENTE") {
-              const date = new Date(agenda.date);
+            const date = new Date(agenda.date);
+
+            // 🔍 Ne garder que les rdv de la semaine en cours
+            if (date >= monday && date <= sunday) {
               const typesDeSoin = agenda.agendaSoins.map((a) => a.soin.nom);
               const type = typesDeSoin.join(", ") || "Consultation";
               const { couleur, icone } = getSoinStyle(
@@ -125,7 +149,7 @@ const AgendaPage = () => {
           <thead>
             <tr className="bg-base-200 text-base font-semibold">
               <th className="bg-base-100">Heure</th>
-              {jours.map((jour) => (
+              {joursRotates.map((jour) => (
                 <th key={jour} className="bg-base-100 text-center">
                   {jour}
                 </th>
@@ -136,7 +160,7 @@ const AgendaPage = () => {
             {heures.map((heure) => (
               <tr key={heure} className="hover">
                 <td className="font-semibold text-sm">{heure}</td>
-                {jours.map((jour) => {
+                {joursRotates.map((jour) => {
                   const rdv = rendezVous.find(
                     (r) => r.heure === heure && r.jour === jour
                   );
@@ -172,3 +196,4 @@ const AgendaPage = () => {
 };
 
 export default AgendaPage;
+
