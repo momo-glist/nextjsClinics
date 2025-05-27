@@ -2,7 +2,7 @@
 
 import Wrapper from "@/app/components/Wrapper";
 import React, { useEffect, useState, useRef } from "react";
-import { useParams } from "next/navigation";
+import {useRouter, useParams } from "next/navigation";
 import { toast } from "react-toastify";
 import { v4 as uuidv4 } from "uuid";
 import { useUser } from "@clerk/nextjs";
@@ -23,6 +23,7 @@ const PatientDetailPage = () => {
   const [showModal, setShowModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedSoins, setSelectedSoins] = useState<string[]>([]);
+  const router = useRouter();
 
   useEffect(() => {
     async function fetchClinique() {
@@ -127,7 +128,7 @@ const PatientDetailPage = () => {
     formData.append("prescription", prescriptions.join(" | "));
     formData.append("soins", JSON.stringify(selectedSoins));
     if (fichierUrl) {
-      formData.append("fichier", fichierUrl); // on envoie l'URL et non le fichier
+      formData.append("fichier", fichierUrl);
     }
 
     try {
@@ -141,8 +142,7 @@ const PatientDetailPage = () => {
       }
 
       toast.success("Consultation enregistrée !");
-      setPrescriptions([""]);
-      setFichier(null);
+      router.push("/patient");
     } catch (error: any) {
       toast.error(error.message || "Erreur inconnue.");
     }
@@ -179,10 +179,7 @@ const PatientDetailPage = () => {
       }
 
       toast.success("Agenda enregistré !");
-      setPrescriptions([""]);
-      setFichier(null);
-      setShowModal(false);
-      setSelectedDate("");
+      router.push("/patient");
     } catch (error: any) {
       toast.error(error.message || "Erreur inconnue.");
     }
@@ -268,25 +265,36 @@ const PatientDetailPage = () => {
             Choisir un ou plusieurs soins
           </span>
         </label>
-        <select
-          multiple
-          className="select select-bordered w-full"
-          value={selectedSoins}
-          onChange={(e) => {
-            const selectedOptions = Array.from(e.target.selectedOptions).map(
-              (opt) => opt.value
-            );
-            setSelectedSoins(selectedOptions);
-          }}
-        >
+        <div className="flex flex-wrap gap-4">
           {patient?.agendas?.flatMap((agenda: any) =>
-            agenda.agendaSoins.map((as: any) => (
-              <option key={as.soin.id} value={as.soin.id}>
-                {as.soin.nom}
-              </option>
-            ))
+            agenda.agendaSoins.map((as: any) => {
+              const soinId = as.soin.id;
+              const soinNom = as.soin.nom;
+              const isChecked = selectedSoins.includes(soinId);
+
+              return (
+                <label key={soinId} className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    value={soinId}
+                    checked={isChecked}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedSoins([...selectedSoins, soinId]);
+                      } else {
+                        setSelectedSoins(
+                          selectedSoins.filter((id) => id !== soinId)
+                        );
+                      }
+                    }}
+                    className="checkbox"
+                  />
+                  <span>{soinNom}</span>
+                </label>
+              );
+            })
           )}
-        </select>
+        </div>
       </div>
 
       {/* Bloc flex horizontal */}

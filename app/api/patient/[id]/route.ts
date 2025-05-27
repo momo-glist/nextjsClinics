@@ -1,13 +1,13 @@
-import { auth } from '@clerk/nextjs/server';
-import { NextResponse, NextRequest } from 'next/server';
-import prisma from '@/lib/prisma';
+import { auth } from "@clerk/nextjs/server";
+import { NextResponse, NextRequest } from "next/server";
+import prisma from "@/lib/prisma";
 
-export async function GET(request: NextRequest) {
+export async function GET(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  console.log("Paramètre ID reçu :", params.id);
   try {
-    // ✅ Extraire l'ID du patient depuis l'URL
-    const url = request.nextUrl;
-    const id = url.pathname.split('/').pop(); // ou utilise RegExp si besoin
-
     const { userId } = await auth();
 
     if (!userId) {
@@ -16,34 +16,39 @@ export async function GET(request: NextRequest) {
 
     const user = await prisma.user.findFirst({
       where: {
-        OR: [
-          { supabaseUserId: userId },
-          { id: userId },
-        ],
+        OR: [{ supabaseUserId: userId }, { id: userId }],
       },
       select: {
         cliniqueId: true,
         role: true,
+        specialites: { select: { id: true } },
       },
     });
 
-    if (!user || !user.cliniqueId) {
-      return NextResponse.json({ error: "Clinique introuvable pour l'utilisateur" }, { status: 400 });
+    if (!user?.cliniqueId) {
+      return NextResponse.json(
+        { error: "Clinique non trouvée" },
+        { status: 400 }
+      );
     }
 
     const patient = await prisma.patient.findFirst({
       where: {
-        id: id!,
+        id: params.id,
         cliniqueId: user.cliniqueId,
       },
       include: {
-        parametresVitaux: true,
+        parametresVitaux: {
+          orderBy: { date: "desc" },
+          take: 1,
+        },
         agendas: {
-          include: {
+          orderBy: { date: "desc" },
+          select: {
+            id: true,
+            date: true,
             agendaSoins: {
-              include: {
-                soin: true,
-              },
+              include: { soin: true },
             },
           },
         },
@@ -51,14 +56,27 @@ export async function GET(request: NextRequest) {
     });
 
     if (!patient) {
-      return NextResponse.json({ error: "Patient non trouvé ou accès interdit" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Patient introuvable" },
+        { status: 404 }
+      );
+    }
+
+    if (user.role === "MEDECIN") {
+      const specialiteIds = user.specialites.map((s) => s.id);
+      const soinsAutorises = patient.agendas.some((agenda) =>
+        agenda.agendaSoins.some((as) =>
+          specialiteIds.includes(as.soin.specialiteId)
+        )
+      );
+      if (!soinsAutorises) {
+        return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+      }
     }
 
     return NextResponse.json(patient, { status: 200 });
-
   } catch (error) {
-    console.error("Erreur lors de la récupération du patient :", error);
+    console.error("Erreur récupération patient :", error);
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }
-

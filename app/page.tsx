@@ -13,7 +13,23 @@ export default async function Home() {
     include: { clinique: true, createdClinique: true },
   });
 
-  if (!utilisateur || !utilisateur.clinique) redirect("/clinique");
+  if (!utilisateur) {
+    redirect("/clinique"); // ou une autre page d'erreur si nécessaire
+  }
+
+  if (utilisateur.role === "ADMIN") {
+    if (!utilisateur.clinique) {
+      redirect("/clinique");
+    }
+    // Continue vers la page admin (celle-ci)
+  } else if (
+    utilisateur.role === "MEDECIN" ||
+    utilisateur.role === "INFIRMIER"
+  ) {
+    redirect("/patient");
+  } else {
+    redirect("/unauthorized"); // ou une autre page
+  }
 
   return (
     <Wrapper>

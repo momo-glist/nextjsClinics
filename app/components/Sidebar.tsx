@@ -1,3 +1,4 @@
+// Sidebar.tsx
 "use client";
 
 import {
@@ -17,41 +18,18 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { UserButton, useUser } from "@clerk/nextjs";
-import React, { useEffect, useState } from "react";
-import {
-  checkAndAddUtilisateur,
-  getCliniqueWithModulesAndRole,
-} from "../action";
-import { ModuleNom, Role } from "@prisma/client";
+import { UserButton } from "@clerk/nextjs";
+import { useUserContext } from "../context/UserContext";
+import { useState } from "react";
 
 const Sidebar = () => {
-  const { user, isLoaded, isSignedIn } = useUser();
-  const email = user?.primaryEmailAddress?.emailAddress as string | undefined;
   const pathname = usePathname();
+  const { role, nomClinique, modules, loading } = useUserContext(); // Utilisation du contexte
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [nomClinique, setNomClinique] = useState<string | null>(null);
-  const [modules, setModules] = useState<ModuleNom[]>([]);
-  const [role, setRole] = useState<Role | null>(null);
 
-  useEffect(() => {
-    if (email) {
-      getCliniqueWithModulesAndRole(email)
-        .then((result) => {
-          if (result) {
-            const { nom, modules, role } = result;
-            setNomClinique(nom);
-            setModules(modules);
-            setRole(role);
-          } else {
-            setNomClinique(null);
-            setModules([]);
-            setRole(null);
-          }
-        })
-        .catch(console.error);
-    }
-  }, [email]);
+  if (loading) {
+    return <div>Chargement...</div>; // Optionnel : gérer le chargement
+  }
 
   // Construction dynamique des liens selon le rôle et modules
   const navLinks = [
@@ -77,7 +55,7 @@ const Sidebar = () => {
       allowedRoles: ["INFIRMIER"],
     },
     {
-      href: "/agenda",
+      href: "/rendez-vous",
       label: "Rendez-vous",
       icon: CalendarClock,
       requiredModules: [],
@@ -119,14 +97,14 @@ const Sidebar = () => {
       icon: Users,
       requiredModules: [],
       allowedRoles: ["ADMIN"],
-    }, 
+    },
   ];
 
   const filteredNavLinks = navLinks.filter(({ requiredModules, allowedRoles }) => {
-  const hasModules = requiredModules.every((mod) => modules.includes(mod as ModuleNom));
-  const hasRole = !allowedRoles || allowedRoles.includes(role as Role);
-  return hasModules && hasRole;
-});
+    const hasModules = requiredModules.every((mod) => modules.includes(mod));
+    const hasRole = !allowedRoles || allowedRoles.includes(role as string);
+    return hasModules && hasRole;
+  });
 
   return (
     <div
@@ -186,3 +164,4 @@ const Sidebar = () => {
 };
 
 export default Sidebar;
+

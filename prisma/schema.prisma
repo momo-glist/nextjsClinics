@@ -127,10 +127,10 @@ model Soin {
   // Médecins pratiquant ce soin
   users User[] @relation("UserSoins")
 
-  consultations Consultation[]
   detailsFacture DetailFacture[] 
 
   agendaSoins AgendaSoin[]
+  consultationSoins ConsultationSoin[]
 }
 
 model Module {
@@ -248,11 +248,10 @@ model Consultation {
   date      DateTime
   patientId String
   userId    String
-  soinId    String
 
   patient Patient @relation(fields: [patientId], references: [id])
   user    User    @relation(fields: [userId], references: [id])
-  soin    Soin    @relation(fields: [soinId], references: [id])
+  consultationSoins ConsultationSoin[] 
 
   parametresVitaux ParametresVitaux[]
 
@@ -263,6 +262,16 @@ model Consultation {
   // Relation 1:1 vers Facture (clé étrangère dans Consultation)
   facture   Facture? @relation("ConsultationFacture", fields: [factureId], references: [id])
   factureId String?  @unique
+}
+
+model ConsultationSoin {
+  id             String        @id @default(uuid())
+  consultation   Consultation @relation(fields: [consultationId], references: [id])
+  consultationId String
+  soin           Soin         @relation(fields: [soinId], references: [id])
+  soinId         String
+
+  @@unique([consultationId, soinId]) // Pour éviter les doublons
 }
 
 model Prescription {

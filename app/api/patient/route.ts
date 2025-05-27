@@ -157,10 +157,7 @@ export async function GET() {
     // Récupérer la clinique de l'utilisateur connecté
     const user = await prisma.user.findFirst({
       where: {
-        OR: [
-          { supabaseUserId: userId },
-          { id: userId }
-        ],
+        OR: [{ supabaseUserId: userId }, { id: userId }],
       },
       select: {
         cliniqueId: true,
@@ -180,8 +177,8 @@ export async function GET() {
       );
     }
 
-    // Récupérer les patients avec leurs agendas EN_ATTENTE et les soins associés
     let patients;
+    const now = new Date();
 
     if (
       user.role === "ADMIN" ||
@@ -246,6 +243,9 @@ export async function GET() {
           agendas: {
             where: {
               statut: "EN_ATTENTE",
+              date: {
+                lt: now, // seulement ceux dont la date est dans le passé
+              },
               agendaSoins: {
                 some: {
                   soin: {
@@ -279,6 +279,107 @@ export async function GET() {
       "Erreur récupération patients avec agendas en attente:",
       error
     );
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+  }
+}
+
+export async function PATCH(req: Request) {
+  try {
+    const { userId } = await auth();
+
+    if (!userId) {
+      return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    }
+
+    const body = await req.json();
+    const { patientId, nom, prenom, age, telephone, adresse, soins } = body;
+
+    if (!patientId) {
+      return NextResponse.json({ error: "patientId requis" }, { status: 400 });
+    }
+
+    if (!soins || !Array.isArray(soins) || soins.length === 0) {
+      return NextResponse.json(
+        { error: "Veuillez sélectionner au moins un soin." },
+        { status: 400 }
+      );
+    }
+
+    // Vérifier la validité des soins
+    for (const soin of soins) {
+      if (!soin.id || typeof soin.prix !== "number") {
+        return NextResponse.json(
+          { error: "Chaque soin doit avoir un id et un prix valide." },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Vérifier l'existence des soins
+    const existingSoins = await prisma.soin.findMany({
+      where: { id: { in: soins.map((s: any) => s.id) } },
+      select: { id: true },
+    });
+
+    const existingIds = existingSoins.map((s) => s.id);
+    const invalidIds = soins.filter((s: any) => !existingIds.includes(s.id));
+    if (invalidIds.length > 0) {
+      return NextResponse.json(
+        {
+          error: `Soins inexistants: ${invalidIds.map((s: any) => s.id).join(", ")}`,
+        },
+        { status: 400 }
+      );
+    }
+
+    // Récupérer le patient et sa clinique
+    const patient = await prisma.patient.findUnique({
+      where: { id: patientId },
+      include: { clinique: true },
+    });
+
+    if (!patient) {
+      return NextResponse.json({ error: "Patient non trouvé" }, { status: 404 });
+    }
+
+    // Mettre à jour le patient
+    await prisma.patient.update({
+      where: { id: patientId },
+      data: { nom, prenom, age, telephone, adresse },
+    });
+
+    // Récupérer l’agenda du patient (le plus récent par exemple)
+    const agenda = await prisma.agenda.findFirst({
+      where: { patientId: patientId },
+      orderBy: { date: "desc" },
+    });
+
+    if (!agenda) {
+      return NextResponse.json({ error: "Aucun agenda trouvé pour ce patient" }, { status: 400 });
+    }
+
+    // Créer la facture
+    const totalPrix = soins.reduce((sum: number, soin: any) => sum + soin.prix, 0);
+    const detailsData = soins.map((soin: any) => ({
+      soinId: soin.id,
+      prix: soin.prix,
+    }));
+
+    const facture = await prisma.facture.create({
+      data: {
+        patientId: patient.id,
+        cliniqueId: patient.cliniqueId,
+        agendaId: agenda.id,
+        prix: totalPrix,
+        details: {
+          create: detailsData,
+        },
+      },
+    });
+
+    return NextResponse.json({ patient, facture });
+  } catch (error) {
+    console.error("Erreur modification patient:", error);
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }

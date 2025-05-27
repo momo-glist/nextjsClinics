@@ -24,11 +24,12 @@ export async function POST(req: Request) {
 
     const form = await req.formData();
     const patientId = form.get("patientId") as string;
-    const soinId = form.get("soinId") as string;
+    const soinsRaw = form.get("soins") as string;
+    const soinIds = JSON.parse(soinsRaw);
     const prescriptionRaw = form.get("prescription") as string;
     const fichierUrl = form.get("fichier") as string | null;
 
-    if (!patientId || !soinId) {
+    if (!patientId || !soinIds) {
       return NextResponse.json(
         { error: "Données manquantes" },
         { status: 400 }
@@ -40,8 +41,15 @@ export async function POST(req: Request) {
         date: new Date(),
         patientId,
         userId: existingUser.id,
-        soinId,
         fichier: fichierUrl || null,
+        consultationSoins: {
+          create: soinIds.map((soinId: string) => ({
+            soin: { connect: { id: soinId } },
+          })),
+        },
+      },
+      include: {
+        consultationSoins: true,
       },
     });
 
@@ -81,8 +89,12 @@ export async function GET() {
       where: { userId },
       include: {
         patient: true,
-        soin: true,
         parametresVitaux: true,
+        consultationSoins: {
+          include: {
+            soin: true,
+          },
+        },
       },
       orderBy: { date: "desc" },
     });

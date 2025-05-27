@@ -3,8 +3,13 @@
 import React, { useEffect, useState } from "react";
 import Wrapper from "../components/Wrapper";
 import { Stethoscope, BadgeCheck, Syringe, Baby } from "lucide-react";
-import { Patient, RendezVousAffiche } from "../type";
+import { Patient, RendezVousAffiche, Utilisateur } from "../type";
 import Link from "next/link";
+import ModalRendezVousManques from "../components/RendezVousManques";
+import { Rdv } from "../type";
+import ModalReprogrammationRdv from "../components/ReprogrammationRdv";
+import { toast } from "react-toastify";
+import EmptyState from "../components/EmptyState";
 
 const jours = [
   "Dimanche",
@@ -73,127 +78,215 @@ const getSoinStyle = (type: string) => {
 
 const AgendaPage = () => {
   const [rendezVous, setRendezVous] = useState<RendezVousAffiche[]>([]);
+  const [rdvsManques, setRdvsManques] = useState([]);
+  const [showModal, setShowModal] = useState(false);
+  const [modalReprogrammationOpen, setModalReprogrammationOpen] =
+    useState(false);
+  const [rdvSelectionne, setRdvSelectionne] = useState<Rdv | null>(null);
+  const [utilisateur, setUtilisateur] = useState<Utilisateur | null>(null);
 
   useEffect(() => {
-    async function fetchAgendas() {
+    const fetchUtilisateur = async () => {
       try {
-        const res = await fetch("/api/patient");
-
-        if (!res.ok) {
-          const error = await res.json();
-          console.error("Erreur API :", error);
-          return;
-        }
-
+        const res = await fetch("/api/user");
         const data = await res.json();
-
-        if (!Array.isArray(data)) {
-          console.error("La réponse attendue n'est pas un tableau :", data);
-          return;
-        }
-
-        const rdvs: RendezVousAffiche[] = [];
-
-        // 🗓️ Définir les bornes de la semaine en cours (lundi à dimanche)
-        const now = new Date();
-        const day = now.getDay(); // 0 (dimanche) à 6 (samedi)
-        const diffToMonday = (day + 6) % 7; // ex: lundi = 1 -> 1, dimanche = 0 -> 6
-        const monday = new Date(now);
-        monday.setDate(now.getDate() - diffToMonday);
-        monday.setHours(0, 0, 0, 0);
-
-        const sunday = new Date(monday);
-        sunday.setDate(monday.getDate() + 6);
-        sunday.setHours(23, 59, 59, 999);
-
-        data.forEach((patient: Patient) => {
-          patient.agendas.forEach((agenda) => {
-            const date = new Date(agenda.date);
-
-            // 🔍 Ne garder que les rdv de la semaine en cours
-            if (date >= monday && date <= sunday) {
-              const typesDeSoin = agenda.agendaSoins.map((a) => a.soin.nom);
-              const type = typesDeSoin.join(", ") || "Consultation";
-              const { couleur, icone } = getSoinStyle(
-                typesDeSoin[0] || "Consultation"
-              );
-
-              rdvs.push({
-                jour: jours[date.getDay()],
-                heure: `${date.getHours().toString().padStart(2, "0")}:00`,
-                patient: `${patient.prenom} ${patient.nom}`,
-                type,
-                couleur,
-                icone,
-                patientId: patient.id,
-              });
-            }
-          });
-        });
-
-        setRendezVous(rdvs);
+        setUtilisateur(data);
       } catch (error) {
-        console.error("Erreur fetchAgendas :", error);
+        console.error(
+          "Erreur lors de la récupération de l'utilisateur :",
+          error
+        );
       }
-    }
+    };
 
+    fetchUtilisateur();
+  }, []);
+
+  const handleReprogrammer = (rdv: Rdv) => {
+    setShowModal(false);
+    setRdvSelectionne(rdv);
+    setTimeout(() => {
+      setModalReprogrammationOpen(true);
+    }, 300);
+  };
+
+  useEffect(() => {
+    const fetchRdvs = async () => {
+      const res = await fetch("/api/agenda/rdvs-passes");
+      const data = await res.json();
+      if (data.length > 0) {
+        setRdvsManques(data);
+        setShowModal(true);
+      }
+    };
+    fetchRdvs();
+  }, []);
+
+  async function fetchAgendas() {
+    try {
+      const res = await fetch("/api/patient");
+
+      if (!res.ok) {
+        const error = await res.json();
+        console.error("Erreur API :", error);
+        return;
+      }
+
+      const data = await res.json();
+
+      if (!Array.isArray(data)) {
+        console.error("La réponse attendue n'est pas un tableau :", data);
+        return;
+      }
+
+      const rdvs: RendezVousAffiche[] = [];
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const end = new Date(today);
+      end.setDate(end.getDate() + 6);
+      end.setHours(23, 59, 59, 999);
+
+      data.forEach((patient: Patient) => {
+        patient.agendas.forEach((agenda) => {
+          const date = new Date(agenda.date);
+
+          if (date >= today && date <= end) {
+            const typesDeSoin = agenda.agendaSoins.map((a) => a.soin.nom);
+            const type = typesDeSoin.join(", ") || "Consultation";
+            const { couleur, icone } = getSoinStyle(
+              typesDeSoin[0] || "Consultation"
+            );
+
+            rdvs.push({
+              jour: jours[date.getDay()],
+              heure: `${date.getHours().toString().padStart(2, "0")}:00`,
+              patient: `${patient.prenom} ${patient.nom}`,
+              type,
+              couleur,
+              icone,
+              patientId: patient.id,
+            });
+          }
+        });
+      });
+
+      setRendezVous(rdvs);
+    } catch (error) {
+      console.error("Erreur fetchAgendas :", error);
+    }
+  }
+
+  useEffect(() => {
     fetchAgendas();
   }, []);
 
   return (
     <Wrapper>
       <h1 className="text-3xl font-bold mb-6">Agenda hebdomadaire</h1>
-
       <div className="overflow-x-auto rounded-xl">
-        <table className="table w-full">
-          <thead>
-            <tr className="bg-base-200 text-base font-semibold">
-              <th className="bg-base-100">Heure</th>
-              {joursRotates.map((jour) => (
-                <th key={jour} className="bg-base-100 text-center">
-                  {jour}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {heures.map((heure) => (
-              <tr key={heure} className="hover">
-                <td className="font-semibold text-sm">{heure}</td>
-                {joursRotates.map((jour) => {
-                  const rdv = rendezVous.find(
-                    (r) => r.heure === heure && r.jour === jour
-                  );
-                  return (
-                    <td key={`${jour}-${heure}`} className="align-top">
-                      {rdv ? (
-                        <Link href={`/patient/${rdv.patientId}`}>
-                          <div
-                            className={`rounded-xl p-3 ${rdv.couleur} shadow-sm cursor-pointer hover:shadow-md transition`}
-                          >
-                            <div className="flex items-center gap-2 font-medium mb-1">
-                              {rdv.icone}
-                              <span className="text-sm">{rdv.type}</span>
-                            </div>
-                            <div className="text-xs text-gray-700">
-                              {rdv.patient}
-                            </div>
-                          </div>
-                        </Link>
-                      ) : (
-                        <div className="text-xs text-gray-300 italic"></div>
-                      )}
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        {utilisateur ? (
+          <>
+            <table className="table w-full">
+              <thead>
+                <tr className="bg-base-200 text-base font-semibold">
+                  <th className="bg-base-100">Heure</th>
+                  {joursRotates.map((jour) => (
+                    <th key={jour} className="bg-base-100 text-center">
+                      {jour}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {heures.map((heure) => (
+                  <tr key={heure} className="hover">
+                    <td className="font-semibold text-sm">{heure}</td>
+                    {joursRotates.map((jour) => {
+                      const rdv = rendezVous.find(
+                        (r) => r.heure === heure && r.jour === jour
+                      );
+                      return (
+                        <td key={`${jour}-${heure}`} className="align-top">
+                          {rdv ? (
+                            utilisateur.role === "MEDECIN" ? (
+                              <Link href={`/patient/${rdv.patientId}`}>
+                                <div
+                                  className={`rounded-xl p-3 ${rdv.couleur} shadow-sm cursor-pointer hover:shadow-md transition`}
+                                >
+                                  <div className="flex items-center gap-2 font-medium mb-1">
+                                    {rdv.icone}
+                                    <span className="text-sm">{rdv.type}</span>
+                                  </div>
+                                  <div className="text-xs text-gray-700">
+                                    {rdv.patient}
+                                  </div>
+                                </div>
+                              </Link>
+                            ) : utilisateur.role === "INFIRMIER" ? (
+                              <Link href={`/patient/update/${rdv.patientId}`}>
+                                <div
+                                  className={`rounded-xl p-3 ${rdv.couleur} shadow-sm cursor-pointer hover:shadow-md transition`}
+                                >
+                                  <div className="flex items-center gap-2 font-medium mb-1">
+                                    {rdv.icone}
+                                    <span className="text-sm">{rdv.type}</span>
+                                  </div>
+                                  <div className="text-xs text-gray-700">
+                                    {rdv.patient}
+                                  </div>
+                                </div>
+                              </Link>
+                            ) : (
+                              <div
+                                onClick={() => {
+                                  // Ne rien faire mais visuellement clicable
+                                }}
+                                className={`rounded-xl p-3 ${rdv.couleur} shadow-sm cursor-pointer hover:shadow-md transition`}
+                              >
+                                <div className="flex items-center gap-2 font-medium mb-1">
+                                  {rdv.icone}
+                                  <span className="text-sm">{rdv.type}</span>
+                                </div>
+                                <div className="text-xs text-gray-700">
+                                  {rdv.patient}
+                                </div>
+                              </div>
+                            )
+                          ) : (
+                            <div className="text-xs text-gray-300 italic"></div>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <ModalRendezVousManques
+              rdvs={rdvsManques}
+              open={showModal}
+              onCloseAction={() => setShowModal(false)}
+              onReprogrammerAction={handleReprogrammer}
+            />
+            <ModalReprogrammationRdv
+              open={modalReprogrammationOpen}
+              rdv={rdvSelectionne}
+              onCloseAction={() => setModalReprogrammationOpen(false)}
+              onSuccess={() => {
+                setModalReprogrammationOpen(false);
+                toast.success("Rendez-vous reprogrammé avec succès !");
+                fetchAgendas();
+              }}
+            />
+          </>
+        ) : (
+          <EmptyState message={"Aucun employé créé"} IconComponent="Group" />
+        )}
       </div>
     </Wrapper>
   );
 };
 
 export default AgendaPage;
-

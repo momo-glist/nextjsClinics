@@ -39,12 +39,21 @@ export async function GET() {
 
   const utilisateur = await prisma.user.findUnique({
     where: { email: email.toLowerCase() },
-    include: { clinique: true, createdClinique: true },
+    select: {
+      id: true,
+      email: true,
+      nom: true,
+      image: true,
+      telephone: true,
+      role: true, // 👈 On récupère bien le rôle ici
+      clinique: true,
+      createdClinique: true,
+    },
   });
 
   if (!utilisateur) {
     return NextResponse.json({ error: "Utilisateur non trouvé" }, { status: 404 });
   }
 
-  return NextResponse.json(utilisateur);
+  return NextResponse.json(utilisateur); // 👈 Le `role` est inclus dans la réponse
 }

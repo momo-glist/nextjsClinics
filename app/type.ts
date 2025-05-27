@@ -92,3 +92,20 @@ export interface RendezVousAffiche  {
   patientId: string;
 };
 
+export interface Rdv {
+  id: string,
+  patient: string;
+  date: string;
+  soins: string[];
+  patientId: string;
+}
+
+export interface Utilisateur {
+  id: string;
+  email: string;
+  nom: string;
+  role: "ADMIN" | "MEDECIN" | "INFIRMIER" | "ADMINISTRATIF" | "AUTRE";
+  image?: string;
+  telephone?: string;
+  // ajoute d’autres propriétés selon ce que tu utilises
+}
