@@ -10,7 +10,7 @@ const Wrapper = ({ children }: WrapperProps) => {
   return (
     <div className="drawer lg:drawer-open">
       <input id="my-drawer" type="checkbox" className="drawer-toggle" />
-      
+
       <div className="drawer-content flex flex-col">
         {/* Bouton menu visible uniquement sur mobile */}
         <div className="w-full navbar bg-base-100 lg:hidden px-4 shadow-md">
@@ -35,8 +35,11 @@ const Wrapper = ({ children }: WrapperProps) => {
       </div>
 
       {/* Sidebar : drawer-side */}
-      <div className="drawer-side">
-        <label htmlFor="my-drawer" className="drawer-overlay"></label>
+      <div className="drawer-side bg-transparent backdrop-blur-md">
+        <label
+          htmlFor="my-drawer"
+          className="drawer-overlay bg-transparent"
+        ></label>
         <Sidebar />
       </div>
     </div>

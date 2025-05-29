@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { Patient, RendezVousAffiche, Utilisateur } from "../type";
 import Link from "next/link";
+import EmptyState from "../components/EmptyState";
 
 const jours = [
   "Dimanche",
@@ -86,7 +87,13 @@ const RdvPage = () => {
       try {
         const res = await fetch("/api/user");
         const data = await res.json();
-        setUtilisateur(data);
+
+        if (res.ok) {
+          setUtilisateur(data);
+          fetchWeekAgendas(currentWeekOffset, data);
+        } else {
+          console.error("Erreur utilisateur :", data?.error || data);
+        }
       } catch (error) {
         console.error(
           "Erreur lors de la récupération de l'utilisateur :",
@@ -98,9 +105,9 @@ const RdvPage = () => {
     fetchUtilisateur();
   }, []);
 
-  async function fetchWeekAgendas(offset: number) {
+  async function fetchWeekAgendas(offset: number, utilisateur: Utilisateur) {
     try {
-      const res = await fetch("/api/patient");
+      const res = await fetch("/api/rendez-vous");
 
       if (!res.ok) {
         console.error("Erreur API :", await res.json());
@@ -149,132 +156,140 @@ const RdvPage = () => {
         });
       });
 
+      console.log(utilisateur);
       setRendezVous(rdvs);
+      console.log(rdvs);
     } catch (error) {
       console.error("Erreur fetchAgendasForWeek :", error);
     }
   }
 
   useEffect(() => {
-    fetchWeekAgendas(currentWeekOffset);
-  }, [currentWeekOffset]);
-
-  if (!utilisateur) return <p>Chargement...</p>;
+    if (utilisateur) {
+      fetchWeekAgendas(currentWeekOffset, utilisateur);
+    }
+  }, [currentWeekOffset, utilisateur]);
 
   return (
     <Wrapper>
-      <h1 className="text-3xl font-bold mb-2">Agenda hebdomadaire</h1>
+      {utilisateur ? (
+        <>
+          <h1 className="text-3xl font-bold mb-2">Agenda hebdomadaire</h1>
 
-      <div className="flex items-center gap-4 mb-4">
-        <button
-          className="btn btn-sm btn-outline"
-          onClick={() => {
-            if (currentWeekOffset > 1) {
-              setCurrentWeekOffset((prev) => prev - 1);
-            }
-          }}
-          disabled={currentWeekOffset === 1}
-        >
-          ←
-        </button>
+          <div className="flex items-center gap-4 mb-4">
+            <button
+              className="btn btn-sm btn-outline"
+              onClick={() => {
+                if (currentWeekOffset > 1) {
+                  setCurrentWeekOffset((prev) => prev - 1);
+                }
+              }}
+              disabled={currentWeekOffset === 1}
+            >
+              ←
+            </button>
 
-        <p className="text-lg font-medium">
-          Semaine du{" "}
-          {new Date(
-            new Date().setDate(new Date().getDate() + currentWeekOffset * 7)
-          ).toLocaleDateString("fr-FR", {
-            day: "numeric",
-            month: "long",
-            year: "numeric",
-          })}
-        </p>
+            <p className="text-lg font-medium">
+              Semaine du{" "}
+              {new Date(
+                new Date().setDate(new Date().getDate() + currentWeekOffset * 7)
+              ).toLocaleDateString("fr-FR", {
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+              })}
+            </p>
 
-        <button
-          className="btn btn-sm btn-outline"
-          onClick={() => setCurrentWeekOffset((prev) => prev + 1)}
-        >
-          →
-        </button>
-      </div>
+            <button
+              className="btn btn-sm btn-outline"
+              onClick={() => setCurrentWeekOffset((prev) => prev + 1)}
+            >
+              →
+            </button>
+          </div>
 
-      <div className="overflow-x-auto rounded-xl">
-        <table className="table w-full">
-          <thead>
-            <tr className="bg-base-200 text-base font-semibold">
-              <th className="bg-base-100">Heure</th>
-              {joursRotates.map((jour) => (
-                <th key={jour} className="bg-base-100 text-center">
-                  {jour}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {heures.map((heure) => (
-              <tr key={heure} className="hover">
-                <td className="font-semibold text-sm">{heure}</td>
-                {joursRotates.map((jour) => {
-                  const rdv = rendezVous.find(
-                    (r) => r.heure === heure && r.jour === jour
-                  );
-                  return (
-                    <td key={`${jour}-${heure}`} className="align-top">
-                      {rdv ? (
-                        utilisateur.role === "MEDECIN" ? (
-                          <Link href={`/patient/${rdv.patientId}`}>
-                            <div
-                              className={`rounded-xl p-3 ${rdv.couleur} shadow-sm cursor-pointer hover:shadow-md transition`}
-                            >
-                              <div className="flex items-center gap-2 font-medium mb-1">
-                                {rdv.icone}
-                                <span className="text-sm">{rdv.type}</span>
+          <div className="overflow-x-auto rounded-xl">
+            <table className="table w-full">
+              <thead>
+                <tr className="bg-base-200 text-base font-semibold">
+                  <th className="bg-base-100">Heure</th>
+                  {joursRotates.map((jour) => (
+                    <th key={jour} className="bg-base-100 text-center">
+                      {jour}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {heures.map((heure) => (
+                  <tr key={heure} className="hover">
+                    <td className="font-semibold text-sm">{heure}</td>
+                    {joursRotates.map((jour) => {
+                      const rdv = rendezVous.find(
+                        (r) => r.heure === heure && r.jour === jour
+                      );
+                      return (
+                        <td key={`${jour}-${heure}`} className="align-top">
+                          {rdv ? (
+                            utilisateur.role === "MEDECIN" ? (
+                              <Link href={`/patient/${rdv.patientId}`}>
+                                <div
+                                  className={`rounded-xl p-3 ${rdv.couleur} shadow-sm cursor-pointer hover:shadow-md transition`}
+                                >
+                                  <div className="flex items-center gap-2 font-medium mb-1">
+                                    {rdv.icone}
+                                    <span className="text-sm">{rdv.type}</span>
+                                  </div>
+                                  <div className="text-xs text-gray-700">
+                                    {rdv.patient}
+                                  </div>
+                                </div>
+                              </Link>
+                            ) : utilisateur.role === "INFIRMIER" ? (
+                              <Link href={`/patient/update/${rdv.patientId}`}>
+                                <div
+                                  className={`rounded-xl p-3 ${rdv.couleur} shadow-sm cursor-pointer hover:shadow-md transition`}
+                                >
+                                  <div className="flex items-center gap-2 font-medium mb-1">
+                                    {rdv.icone}
+                                    <span className="text-sm">{rdv.type}</span>
+                                  </div>
+                                  <div className="text-xs text-gray-700">
+                                    {rdv.patient}
+                                  </div>
+                                </div>
+                              </Link>
+                            ) : (
+                              <div
+                                onClick={() => {
+                                  // Ne rien faire mais visuellement clicable
+                                }}
+                                className={`rounded-xl p-3 ${rdv.couleur} shadow-sm cursor-pointer hover:shadow-md transition`}
+                              >
+                                <div className="flex items-center gap-2 font-medium mb-1">
+                                  {rdv.icone}
+                                  <span className="text-sm">{rdv.type}</span>
+                                </div>
+                                <div className="text-xs text-gray-700">
+                                  {rdv.patient}
+                                </div>
                               </div>
-                              <div className="text-xs text-gray-700">
-                                {rdv.patient}
-                              </div>
-                            </div>
-                          </Link>
-                        ) : utilisateur.role === "INFIRMIER" ? (
-                          <Link href={`/patient/update/${rdv.patientId}`}>
-                            <div
-                              className={`rounded-xl p-3 ${rdv.couleur} shadow-sm cursor-pointer hover:shadow-md transition`}
-                            >
-                              <div className="flex items-center gap-2 font-medium mb-1">
-                                {rdv.icone}
-                                <span className="text-sm">{rdv.type}</span>
-                              </div>
-                              <div className="text-xs text-gray-700">
-                                {rdv.patient}
-                              </div>
-                            </div>
-                          </Link>
-                        ) : (
-                          <div
-                            onClick={() => {
-                              // Ne rien faire mais visuellement clicable
-                            }}
-                            className={`rounded-xl p-3 ${rdv.couleur} shadow-sm cursor-pointer hover:shadow-md transition`}
-                          >
-                            <div className="flex items-center gap-2 font-medium mb-1">
-                              {rdv.icone}
-                              <span className="text-sm">{rdv.type}</span>
-                            </div>
-                            <div className="text-xs text-gray-700">
-                              {rdv.patient}
-                            </div>
-                          </div>
-                        )
-                      ) : (
-                        <div className="text-xs text-gray-300 italic"></div>
-                      )}
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                            )
+                          ) : (
+                            <div className="text-xs text-gray-300 italic"></div>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      ) : (
+        <EmptyState message={"Aucun Rendez vous"} IconComponent="Group" />
+      )}
     </Wrapper>
   );
 };

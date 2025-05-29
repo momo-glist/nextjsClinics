@@ -47,7 +47,6 @@ const couleursDaisy = [
   "bg-orange-100",
 ];
 
-// Fonction pour obtenir la couleur et l’icône du soin
 const getSoinStyle = (type: string) => {
   if (type.includes("Accouchement")) {
     return {
@@ -86,20 +85,34 @@ const AgendaPage = () => {
   const [utilisateur, setUtilisateur] = useState<Utilisateur | null>(null);
 
   useEffect(() => {
-    const fetchUtilisateur = async () => {
+    const fetchUtilisateurEtAgendas = async () => {
       try {
         const res = await fetch("/api/user");
         const data = await res.json();
-        setUtilisateur(data);
+
+        if (res.ok) {
+          setUtilisateur(data);
+
+          // Une fois utilisateur récupéré, appeler fetchAgendas
+          await fetchAgendas(data);
+
+          // Ensuite fetch des rdvs manqués
+          const rdvsRes = await fetch("/api/agenda/rdvs-passes");
+          const rdvsData = await rdvsRes.json();
+
+          if (rdvsRes.ok && rdvsData.length > 0) {
+            setRdvsManques(rdvsData);
+            setShowModal(true);
+          }
+        } else {
+          console.error("Erreur utilisateur :", data?.error || data);
+        }
       } catch (error) {
-        console.error(
-          "Erreur lors de la récupération de l'utilisateur :",
-          error
-        );
+        console.error("Erreur lors du chargement :", error);
       }
     };
 
-    fetchUtilisateur();
+    fetchUtilisateurEtAgendas();
   }, []);
 
   const handleReprogrammer = (rdv: Rdv) => {
@@ -110,19 +123,7 @@ const AgendaPage = () => {
     }, 300);
   };
 
-  useEffect(() => {
-    const fetchRdvs = async () => {
-      const res = await fetch("/api/agenda/rdvs-passes");
-      const data = await res.json();
-      if (data.length > 0) {
-        setRdvsManques(data);
-        setShowModal(true);
-      }
-    };
-    fetchRdvs();
-  }, []);
-
-  async function fetchAgendas() {
+  async function fetchAgendas(utilisateur: Utilisateur) {
     try {
       const res = await fetch("/api/patient");
 
@@ -172,22 +173,20 @@ const AgendaPage = () => {
         });
       });
 
+      console.log(utilisateur);
       setRendezVous(rdvs);
+      console.log(rdvs);
     } catch (error) {
       console.error("Erreur fetchAgendas :", error);
     }
   }
 
-  useEffect(() => {
-    fetchAgendas();
-  }, []);
-
   return (
     <Wrapper>
-      <h1 className="text-3xl font-bold mb-6">Agenda hebdomadaire</h1>
-      <div className="overflow-x-auto rounded-xl">
-        {utilisateur ? (
-          <>
+      {utilisateur ? (
+        <>
+          <h1 className="text-3xl font-bold mb-6">Agenda hebdomadaire</h1>
+          <div className="overflow-x-auto rounded-xl">
             <table className="table w-full">
               <thead>
                 <tr className="bg-base-200 text-base font-semibold">
@@ -240,9 +239,7 @@ const AgendaPage = () => {
                               </Link>
                             ) : (
                               <div
-                                onClick={() => {
-                                  // Ne rien faire mais visuellement clicable
-                                }}
+                                onClick={() => {}}
                                 className={`rounded-xl p-3 ${rdv.couleur} shadow-sm cursor-pointer hover:shadow-md transition`}
                               >
                                 <div className="flex items-center gap-2 font-medium mb-1">
@@ -277,14 +274,14 @@ const AgendaPage = () => {
               onSuccess={() => {
                 setModalReprogrammationOpen(false);
                 toast.success("Rendez-vous reprogrammé avec succès !");
-                fetchAgendas();
+                fetchAgendas(utilisateur);
               }}
             />
-          </>
-        ) : (
-          <EmptyState message={"Aucun employé créé"} IconComponent="Group" />
-        )}
-      </div>
+          </div>
+        </>
+      ) : (
+        <EmptyState message={"Aucun Rendez vous"} IconComponent="Group" />
+      )}
     </Wrapper>
   );
 };

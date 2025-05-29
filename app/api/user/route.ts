@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import  prisma  from "@/lib/prisma";
-import { currentUser } from "@clerk/nextjs/server";
+import { auth } from "@clerk/nextjs/server";
 
 export async function POST(req: Request) {
   const body = await req.json()
@@ -26,34 +26,36 @@ export async function POST(req: Request) {
 }
 
 export async function GET() {
-  const user = await currentUser();
+  try {
+    const { userId } = await auth();
 
-  if (!user) {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    if (!userId) {
+      return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    }
+
+    const utilisateur = await prisma.user.findFirst({
+      where: {
+        OR: [{ supabaseUserId: userId }, { id: userId }],
+      },
+      select: {
+        id: true,
+        email: true,
+        nom: true,
+        image: true,
+        telephone: true,
+        role: true,
+        clinique: true,
+        createdClinique: true,
+      },
+    });
+
+    if (!utilisateur) {
+      return NextResponse.json({ error: "Utilisateur non trouvé" }, { status: 404 });
+    }
+
+    return NextResponse.json(utilisateur);
+  } catch (error) {
+    console.error("Erreur lors de la récupération de l'utilisateur :", error);
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
-
-  const email = user.emailAddresses[0]?.emailAddress;
-  if (!email) {
-    return NextResponse.json({ error: "Email non trouvé" }, { status: 400 });
-  }
-
-  const utilisateur = await prisma.user.findUnique({
-    where: { email: email.toLowerCase() },
-    select: {
-      id: true,
-      email: true,
-      nom: true,
-      image: true,
-      telephone: true,
-      role: true, // 👈 On récupère bien le rôle ici
-      clinique: true,
-      createdClinique: true,
-    },
-  });
-
-  if (!utilisateur) {
-    return NextResponse.json({ error: "Utilisateur non trouvé" }, { status: 404 });
-  }
-
-  return NextResponse.json(utilisateur); // 👈 Le `role` est inclus dans la réponse
 }

@@ -124,19 +124,19 @@ const CreatePatientPage = () => {
     setLoading(true);
 
     // ✅ Validations avant tout
-    if (!isValidTension(formData.tension)) {
+    if (formData.tension && !isValidTension(formData.tension)) {
       toast.error("Format de tension invalide. Utilise le format ex: 12/8");
       setLoading(false);
       return;
     }
 
-    if (!isValidTemperature(formData.temperature)) {
+    if (formData.temperature && !isValidTemperature(formData.temperature)) {
       toast.error("Température invalide. Elle doit être entre 35°C et 42°C");
       setLoading(false);
       return;
     }
 
-    if (!isValidPoids(formData.poids)) {
+    if (formData.poids && !isValidPoids(formData.poids)) {
       toast.error("Poids invalide. Il doit être entre 1 kg et 300 kg");
       setLoading(false);
       return;
@@ -168,19 +168,26 @@ const CreatePatientPage = () => {
       const { patient } = await patientRes.json();
 
       // 👉 2. Enregistrement des paramètres vitaux
-      const vitauxRes = await fetch("/api/parametres-vitaux", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          patientId: patient.id,
-          temperature: parseFloat(formData.temperature),
-          tension: formData.tension,
-          poids: parseFloat(formData.poids),
-        }),
-      });
+      if (formData.tension || formData.temperature || formData.poids) {
+        const vitauxRes = await fetch("/api/parametres-vitaux", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            patientId: patient.id,
+            temperature: formData.temperature
+              ? parseFloat(formData.temperature)
+              : null,
+            tension: formData.tension || null,
+            poids: formData.poids ? parseFloat(formData.poids) : null,
+          }),
+        });
 
-      if (!vitauxRes.ok)
-        throw new Error("Erreur enregistrement paramètres vitaux");
+        if (!vitauxRes.ok) {
+          toast.error("Erreur lors de l'enregistrement des paramètres vitaux");
+          setLoading(false);
+          return;
+        }
+      }
 
       // 👉 3. Génération de la facture en PDF
       // const invoiceElement = invoiceRef.current;
@@ -265,7 +272,6 @@ const CreatePatientPage = () => {
                 className="input input-bordered w-full"
                 value={formData.age}
                 onChange={handleChange}
-                required
               />
               <input
                 type="text"
@@ -274,7 +280,6 @@ const CreatePatientPage = () => {
                 className="input input-bordered w-full"
                 value={formData.telephone}
                 onChange={handleChange}
-                required
               />
               <input
                 type="text"
@@ -293,7 +298,6 @@ const CreatePatientPage = () => {
                 className="input input-bordered w-full"
                 value={formData.temperature}
                 onChange={handleChange}
-                required
               />
               <input
                 type="text"
@@ -302,7 +306,6 @@ const CreatePatientPage = () => {
                 className="input input-bordered w-full"
                 value={formData.tension}
                 onChange={handleChange}
-                required
               />
               <input
                 type="number"
@@ -312,7 +315,6 @@ const CreatePatientPage = () => {
                 className="input input-bordered w-full"
                 value={formData.poids}
                 onChange={handleChange}
-                required
               />
               <input
                 type="datetime-local"
@@ -416,10 +418,7 @@ const CreatePatientPage = () => {
           )}
         </div>
         {/* Facture à droite */}
-        <div
-          className="w-1/2 ml-8"
-          style={{ maxHeight: "80vh" }}
-        >
+        <div className="w-1/2 ml-8" style={{ maxHeight: "80vh" }}>
           <InvoicePDF
             ref={invoiceRef}
             nom={formData.nom}

@@ -157,6 +157,7 @@ model Patient {
   age        Int
   telephone  String
   adresse    String
+  createdAt      DateTime @default(now())
   cliniqueId String
   clinique   Clinique @relation(fields: [cliniqueId], references: [id])
 

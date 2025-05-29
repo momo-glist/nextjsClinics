@@ -147,6 +147,9 @@ export async function POST(req: Request) {
 }
 
 export async function GET() {
+  const today = new Date();
+  const endOfWeek = new Date();
+  endOfWeek.setDate(today.getDate() + 7);
   try {
     const { userId } = await auth();
 
@@ -214,7 +217,7 @@ export async function GET() {
           },
         },
       });
-    } else if (user.role === "MEDECIN") {
+    }else if (user.role === "MEDECIN") {
       const specialiteIds = user.specialites.map((s) => s.id);
 
       patients = await prisma.patient.findMany({
@@ -244,7 +247,8 @@ export async function GET() {
             where: {
               statut: "EN_ATTENTE",
               date: {
-                lt: now, // seulement ceux dont la date est dans le passé
+                gte: today,
+                lte: endOfWeek,
               },
               agendaSoins: {
                 some: {
@@ -339,7 +343,10 @@ export async function PATCH(req: Request) {
     });
 
     if (!patient) {
-      return NextResponse.json({ error: "Patient non trouvé" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Patient non trouvé" },
+        { status: 404 }
+      );
     }
 
     // Mettre à jour le patient
@@ -355,11 +362,17 @@ export async function PATCH(req: Request) {
     });
 
     if (!agenda) {
-      return NextResponse.json({ error: "Aucun agenda trouvé pour ce patient" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Aucun agenda trouvé pour ce patient" },
+        { status: 400 }
+      );
     }
 
     // Créer la facture
-    const totalPrix = soins.reduce((sum: number, soin: any) => sum + soin.prix, 0);
+    const totalPrix = soins.reduce(
+      (sum: number, soin: any) => sum + soin.prix,
+      0
+    );
     const detailsData = soins.map((soin: any) => ({
       soinId: soin.id,
       prix: soin.prix,

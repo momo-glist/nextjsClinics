@@ -24,11 +24,11 @@ import { useState } from "react";
 
 const Sidebar = () => {
   const pathname = usePathname();
-  const { role, nomClinique, modules, loading } = useUserContext(); // Utilisation du contexte
+  const { role, nomClinique, modules, loading } = useUserContext();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   if (loading) {
-    return <div>Chargement...</div>; // Optionnel : gérer le chargement
+    return 
   }
 
   // Construction dynamique des liens selon le rôle et modules
@@ -108,9 +108,10 @@ const Sidebar = () => {
 
   return (
     <div
-      className={`flex flex-col justify-between h-screen menu p-4 bg-base-200 text-base-content transition-all duration-300 ${
-        isCollapsed ? "w-20" : "w-64"
-      }`}
+     className={`flex flex-col justify-between h-screen menu p-4 
+    bg-base-200/70 backdrop-blur-md shadow-md border border-base-300/30 rounded-lg 
+    text-base-content transition-all duration-300 
+    ${isCollapsed ? "w-20" : "w-64"}`}
     >
       {/* Partie haute */}
       <div>

@@ -100,12 +100,62 @@ export interface Rdv {
   patientId: string;
 }
 
-export interface Utilisateur {
+export interface Utilisateur  {
   id: string;
   email: string;
   nom: string;
-  role: "ADMIN" | "MEDECIN" | "INFIRMIER" | "ADMINISTRATIF" | "AUTRE";
-  image?: string;
-  telephone?: string;
-  // ajoute d’autres propriétés selon ce que tu utilises
-}
+  image: string | null;
+  telephone: string | null;
+  role: "ADMIN" | "MEDECIN" | "INFIRMIER";
+  clinique?: any;
+  createdClinique?: any;
+};
+
+
+export interface DashboardClientProps {
+  totalPatients: number;
+  totalConsultations: number;
+  totalAgenda: number;
+};
+
+export interface WeeklyData {
+  day: string;
+  consultations: number;
+};
+
+export interface Doctor {
+  name: string;
+  specialties: string[];
+  consultations: number;
+};
+
+export interface SoinData {
+  soin: string;
+  score: number;
+};
+
+export interface PieData {
+  name: string;
+  value: number;
+};
+
+export interface DashboardStats {
+  totalPatients: number;
+  totalConsultations: number;
+  totalAgenda: number;
+  totalFacture: number;
+  weeklyData: { day: string; consultations: number }[];
+  doctors: {
+    name: string;
+    specialties: string[];
+    consultations: number;
+  }[];
+  soinsData: {
+    soin: string;
+    score: number;
+  }[];
+  pieData: {
+    name: string;
+    value: number;
+  }[];
+};
