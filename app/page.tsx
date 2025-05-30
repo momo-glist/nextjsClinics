@@ -1,7 +1,7 @@
 // app/page.tsx ou app/(dashboard)/page.tsx
 import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import  prisma  from "@/lib/prisma"; // <-- Ton client Prisma
+import  prisma  from "@/lib/prisma";
 import DashboardClient from "./components/Dashboard";
 import Wrapper from "./components/Wrapper";
 
@@ -23,7 +23,7 @@ export default async function HomePage() {
   switch (user.role) {
     case "MEDECIN":
     case "INFIRMIER":
-      redirect("/patient");
+      redirect("/rendez-vous");
       break;
     case "ADMIN":
       // Ne rien faire, on affiche le dashboard

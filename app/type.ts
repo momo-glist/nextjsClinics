@@ -144,7 +144,7 @@ export interface DashboardStats {
   totalConsultations: number;
   totalAgenda: number;
   totalFacture: number;
-  weeklyData: { day: string; consultations: number }[];
+  periodicData: { period: string; consultations: number }[];
   doctors: {
     name: string;
     specialties: string[];

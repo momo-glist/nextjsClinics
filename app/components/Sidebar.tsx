@@ -41,13 +41,6 @@ const Sidebar = () => {
       allowedRoles: ["ADMIN"],
     },
     {
-      href: "/patient",
-      label: "Patients à consulter",
-      icon: Stethoscope,
-      requiredModules: [],
-      allowedRoles: ["ADMIN", "MEDECIN", "INFIRMIER"],
-    },
-    {
       href: "/patient/create",
       label: "Ajouter un patient",
       icon: Stethoscope,
@@ -60,13 +53,6 @@ const Sidebar = () => {
       icon: CalendarClock,
       requiredModules: [],
       allowedRoles: ["ADMIN", "MEDECIN"],
-    },
-    {
-      href: "/laboratoire",
-      label: "Laboratoire",
-      icon: Microscope,
-      requiredModules: ["LABORATOIRE"],
-      allowedRoles: ["ADMIN"],
     },
     { href: "/soins", label: "Soins", icon: Activity, requiredModules: [], allowedRoles: ["ADMIN"] },
     { href: "/specialite", label: "Spécialités", icon: FolderOpen, requiredModules: [], allowedRoles: ["ADMIN"] },

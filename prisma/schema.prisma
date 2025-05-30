@@ -313,10 +313,10 @@ model DetailFacture {
 
 model Agenda {
   id        String       @id @default(uuid())
-  date      DateTime
-  patientId String
-  userId    String
-  statut    StatutAgenda
+  date      DateTime     
+  patientId String       
+  userId    String       
+  statut    StatutAgenda 
 
   patient Patient @relation(fields: [patientId], references: [id])
   user    User    @relation(fields: [userId], references: [id])
@@ -325,6 +325,10 @@ model Agenda {
   factureId String?
 
   agendaSoins AgendaSoin[]
+    @@index([date])
+  @@index([patientId])
+  @@index([userId])
+  @@index([statut])
 }
 
 model AgendaSoin {

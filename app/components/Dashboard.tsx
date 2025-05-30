@@ -28,13 +28,15 @@ import { DashboardStats } from "../type";
 export default function DashboardClient() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [selectedPeriod, setSelectedPeriod] = useState("semaine");
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const res = await fetch("/api/dashboard");
+        const res = await fetch(`/api/dashboard?period=${selectedPeriod}`);
         const data = await res.json();
         console.log("Données reçues du backend :", data);
+        console.log(data);
         setStats(data);
       } catch (err) {
         console.error("Erreur lors du fetch des stats:", err);
@@ -44,7 +46,11 @@ export default function DashboardClient() {
     };
 
     fetchStats();
-  }, []);
+  }, [selectedPeriod]);
+
+  useEffect(() => {
+    console.log("Période sélectionnée :", selectedPeriod);
+  }, [selectedPeriod]);
 
   if (!stats) {
     return (
@@ -60,11 +66,10 @@ export default function DashboardClient() {
     totalConsultations,
     totalAgenda,
     totalFacture,
-    weeklyData = [],
+    periodicData = [],
     doctors = [],
     soinsData = [],
   } = stats;
-  console.log(stats.weeklyData);
 
   function formatNumber(value: number): string {
     if (value >= 1_000_000) {
@@ -127,6 +132,23 @@ export default function DashboardClient() {
         Tableau de bord
       </h1>
 
+      <div className="flex items-center gap-4 mb-4">
+        <label htmlFor="period" className="font-medium text-gray-700">
+          Période :
+        </label>
+        <select
+          id="period"
+          value={selectedPeriod}
+          onChange={(e) => setSelectedPeriod(e.target.value)}
+          className="select select-bordered"
+        >
+          <option value="semaine">Semaine</option>
+          <option value="mois">Mois</option>
+          <option value="annee">Année</option>
+          <option value="tout">Tout</option>
+        </select>
+      </div>
+
       <div className="flex justify-start gap-2 flex-wrap">
         {summaryData.map((item, index) => (
           <div
@@ -182,8 +204,8 @@ export default function DashboardClient() {
             Consultations Hebdomadaire
           </h2>
           <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={weeklyData}>
-              <XAxis dataKey="day" axisLine={false} tickLine={false} />
+            <BarChart data={periodicData || []}>
+              <XAxis dataKey="period" axisLine={false} tickLine={false} />
               <Tooltip content={<CustomTooltip />} cursor={false} />
               <Bar
                 dataKey="consultations"

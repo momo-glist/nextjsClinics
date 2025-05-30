@@ -24,7 +24,6 @@ const jours = [
   "Samedi",
 ];
 
-// 🔁 Tourner les jours selon le jour actuel
 const rotateDays = (days: string[]) => {
   const today = new Date().getDay();
   return [...days.slice(today), ...days.slice(0, today)];
@@ -32,7 +31,6 @@ const rotateDays = (days: string[]) => {
 
 const joursRotates = rotateDays(jours);
 
-// Heures de 08h00 à 18h00
 const heures = Array.from({ length: 11 }, (_, i) => {
   const h = 8 + i;
   return `${h.toString().padStart(2, "0")}:00`;
@@ -79,7 +77,7 @@ const getSoinStyle = (type: string) => {
 
 const RdvPage = () => {
   const [rendezVous, setRendezVous] = useState<RendezVousAffiche[]>([]);
-  const [currentWeekOffset, setCurrentWeekOffset] = useState(1);
+  const [currentWeekOffset, setCurrentWeekOffset] = useState(0);
   const [utilisateur, setUtilisateur] = useState<Utilisateur | null>(null);
 
   useEffect(() => {
@@ -105,68 +103,69 @@ const RdvPage = () => {
     fetchUtilisateur();
   }, []);
 
-  async function fetchWeekAgendas(offset: number, utilisateur: Utilisateur) {
-    try {
-      const res = await fetch("/api/rendez-vous");
+async function fetchWeekAgendas(offset: number, utilisateur: Utilisateur) {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-      if (!res.ok) {
-        console.error("Erreur API :", await res.json());
-        return;
-      }
+    const start = new Date(today);
+    start.setDate(start.getDate() + offset * 7);
 
-      const data = await res.json();
-      if (!Array.isArray(data)) {
-        console.error("La réponse attendue n'est pas un tableau :", data);
-        return;
-      }
+    const end = new Date(start);
+    end.setDate(end.getDate() + 6);
+    end.setHours(23, 59, 59, 999);
 
-      const rdvs: RendezVousAffiche[] = [];
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+    const startISO = start.toISOString();
+    const endISO = end.toISOString();
 
-      // Début de la semaine selon l'offset
-      const start = new Date(today);
-      start.setDate(start.getDate() + offset * 7);
+    const res = await fetch(`/api/patient?start=${startISO}&end=${endISO}`);
 
-      const end = new Date(start);
-      end.setDate(end.getDate() + 6);
-      end.setHours(23, 59, 59, 999);
+    if (!res.ok) {
+      console.error("Erreur API :", await res.json());
+      return;
+    }
 
-      data.forEach((patient: Patient) => {
-        patient.agendas.forEach((agenda) => {
-          const date = new Date(agenda.date);
+    const data = await res.json();
+    if (!Array.isArray(data)) {
+      console.error("La réponse attendue n'est pas un tableau :", data);
+      return;
+    }
 
-          if (date >= start && date <= end) {
-            const typesDeSoin = agenda.agendaSoins.map((a) => a.soin.nom);
-            const type = typesDeSoin.join(", ") || "Consultation";
-            const { couleur, icone } = getSoinStyle(
-              typesDeSoin[0] || "Consultation"
-            );
+    const rdvs: RendezVousAffiche[] = [];
 
-            rdvs.push({
-              jour: jours[date.getDay()],
-              heure: `${date.getHours().toString().padStart(2, "0")}:00`,
-              patient: `${patient.prenom} ${patient.nom}`,
-              type,
-              couleur,
-              icone,
-              patientId: patient.id,
-            });
-          }
+    data.forEach((patient: Patient) => {
+      patient.agendas.forEach((agenda) => {
+        const date = new Date(agenda.date);
+
+        const typesDeSoin = agenda.agendaSoins.map((a) => a.soin.nom);
+        const type = typesDeSoin.join(", ") || "Consultation";
+        const { couleur, icone } = getSoinStyle(
+          typesDeSoin[0] || "Consultation"
+        );
+
+        rdvs.push({
+          jour: jours[date.getDay()],
+          heure: `${date.getHours().toString().padStart(2, "0")}:00`,
+          patient: `${patient.prenom} ${patient.nom}`,
+          type,
+          couleur,
+          icone,
+          patientId: patient.id,
         });
       });
+    });
 
-      console.log(utilisateur);
-      setRendezVous(rdvs);
-      console.log(rdvs);
-    } catch (error) {
-      console.error("Erreur fetchAgendasForWeek :", error);
-    }
+    setRendezVous(rdvs);
+  } catch (error) {
+    console.error("Erreur fetchAgendasForWeek :", error);
   }
+}
+
 
   useEffect(() => {
     if (utilisateur) {
       fetchWeekAgendas(currentWeekOffset, utilisateur);
+      console.log(currentWeekOffset)
     }
   }, [currentWeekOffset, utilisateur]);
 
@@ -180,11 +179,11 @@ const RdvPage = () => {
             <button
               className="btn btn-sm btn-outline"
               onClick={() => {
-                if (currentWeekOffset > 1) {
+                if (currentWeekOffset > 0) {
                   setCurrentWeekOffset((prev) => prev - 1);
                 }
               }}
-              disabled={currentWeekOffset === 1}
+              disabled={currentWeekOffset === 0}
             >
               ←
             </button>
@@ -262,7 +261,6 @@ const RdvPage = () => {
                             ) : (
                               <div
                                 onClick={() => {
-                                  // Ne rien faire mais visuellement clicable
                                 }}
                                 className={`rounded-xl p-3 ${rdv.couleur} shadow-sm cursor-pointer hover:shadow-md transition`}
                               >
