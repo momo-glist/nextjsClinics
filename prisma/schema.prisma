@@ -19,6 +19,9 @@ enum Role {
   MEDECIN
   INFIRMIER
   ADMINISTRATIF
+  LABORANTIN
+  PHARMACIEN
+  COMPTABLE
   AUTRE
 }
 
@@ -30,7 +33,6 @@ enum ModuleNom {
 
 enum StatutAgenda {
   CONFIRME
-  PAYE
   ANNULE
   EN_ATTENTE
 }
@@ -53,7 +55,6 @@ model User {
   invitations   Invitation[]
   specialites   Specialite[]   @relation("UserSpecialites")
   soins         Soin[]         @relation("UserSoins")
-  consultations Consultation[]
   agendas       Agenda[]
 }
 
@@ -130,7 +131,6 @@ model Soin {
   detailsFacture DetailFacture[] 
 
   agendaSoins AgendaSoin[]
-  consultationSoins ConsultationSoin[]
 }
 
 model Module {
@@ -161,7 +161,6 @@ model Patient {
   cliniqueId String
   clinique   Clinique @relation(fields: [cliniqueId], references: [id])
 
-  consultations Consultation[]
   agendas       Agenda[]
 
   parametresVitaux ParametresVitaux[]
@@ -171,10 +170,10 @@ model Patient {
 model ParametresVitaux {
   id             String  @id @default(uuid())
   patientId      String
-  consultationId String?
+  agendaId String?
 
   patient      Patient       @relation(fields: [patientId], references: [id])
-  consultation Consultation? @relation(fields: [consultationId], references: [id])
+  agenda       Agenda? @relation(fields: [agendaId], references: [id])
 
   date        DateTime @default(now())
   temperature Float
@@ -182,17 +181,31 @@ model ParametresVitaux {
   poids       Float
 }
 
-model Medicament {
-  id          String   @id @default(uuid())
-  nom         String
-  description String
-  prix        Float
-  cliniqueId  String
-  clinique    Clinique @relation(fields: [cliniqueId], references: [id])
+model CatalogueMedicament {
+  id             String       @id @default(uuid())
+  nom            String
+  forme          String       // ex : Comprimé, Sirop
+  dosage_valeur  Float        // ex : 500
+  dosage_unite   String       // ex : mg, ml
+  laboratoire    String
+  code_barre     String?      @unique  // EAN-13, GTIN, etc.
 
-  stock              StockMedicament?
-  historiqueAchats   HistoriqueAchat[]
-  detailVentes       DetailVente[]
+  medicaments    Medicament[]
+}
+
+model Medicament {
+  id                String             @id @default(uuid())
+  description       String
+  prix              Float              // prix par unité (valeur par défaut)
+  cliniqueId        String
+  clinique          Clinique           @relation(fields: [cliniqueId], references: [id])
+
+  catalogueMedId    String
+  catalogueMed      CatalogueMedicament @relation(fields: [catalogueMedId], references: [id])
+
+  stock             StockMedicament?
+  historiqueAchats  HistoriqueAchat[]
+  detailVentes      DetailVente[]
 }
 
 model StockMedicament {
@@ -234,6 +247,7 @@ model DetailVente {
   medicament    Medicament @relation(fields: [medicamentId], references: [id])
 }
 
+
 model Comptabilite {
   id         String   @id @default(uuid())
   mois       Int
@@ -244,43 +258,12 @@ model Comptabilite {
   clinique   Clinique @relation(fields: [cliniqueId], references: [id], onDelete: Cascade)
 }
 
-model Consultation {
-  id        String   @id @default(uuid())
-  date      DateTime
-  patientId String
-  userId    String
-
-  patient Patient @relation(fields: [patientId], references: [id])
-  user    User    @relation(fields: [userId], references: [id])
-  consultationSoins ConsultationSoin[] 
-
-  parametresVitaux ParametresVitaux[]
-
-  prescription Prescription? // relation vers Prescription
-
-  fichier String?
-
-  // Relation 1:1 vers Facture (clé étrangère dans Consultation)
-  facture   Facture? @relation("ConsultationFacture", fields: [factureId], references: [id])
-  factureId String?  @unique
-}
-
-model ConsultationSoin {
-  id             String        @id @default(uuid())
-  consultation   Consultation @relation(fields: [consultationId], references: [id])
-  consultationId String
-  soin           Soin         @relation(fields: [soinId], references: [id])
-  soinId         String
-
-  @@unique([consultationId, soinId]) // Pour éviter les doublons
-}
-
 model Prescription {
-  id             String       @id @default(uuid())
-  consultationId String       @unique
-  consultation   Consultation @relation(fields: [consultationId], references: [id])
-  date           DateTime     @default(now())
-  remarque       String?      // suffit pour noter les prescriptions en texte libre
+  id             String    @id @default(uuid())
+  agendaId       String?   @unique
+  agenda         Agenda?   @relation(fields: [agendaId], references: [id])
+  date           DateTime  @default(now())
+  remarque       String?
 }
 
 model Facture {
@@ -291,8 +274,6 @@ model Facture {
 
   agendaId   String?          @unique
   agenda     Agenda?          @relation("AgendaFacture", fields: [agendaId], references: [id])
-
-  consultation Consultation?  @relation("ConsultationFacture")
 
   patient    Patient          @relation(fields: [patientId], references: [id])
   clinique   Clinique         @relation(fields: [cliniqueId], references: [id])
@@ -318,17 +299,19 @@ model Agenda {
   userId    String       
   statut    StatutAgenda 
 
+  fichier   String?
+
   patient Patient @relation(fields: [patientId], references: [id])
   user    User    @relation(fields: [userId], references: [id])
+
+  parametresVitaux ParametresVitaux[]
+
+  prescription Prescription?
 
   facture   Facture? @relation("AgendaFacture")
   factureId String?
 
   agendaSoins AgendaSoin[]
-    @@index([date])
-  @@index([patientId])
-  @@index([userId])
-  @@index([statut])
 }
 
 model AgendaSoin {

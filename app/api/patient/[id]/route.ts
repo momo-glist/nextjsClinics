@@ -32,6 +32,7 @@ export async function GET(
       );
     }
 
+    // Récupérer le patient sans agendas
     const patient = await prisma.patient.findFirst({
       where: {
         id: params.id,
@@ -41,16 +42,6 @@ export async function GET(
         parametresVitaux: {
           orderBy: { date: "desc" },
           take: 1,
-        },
-        agendas: {
-          orderBy: { date: "desc" },
-          select: {
-            id: true,
-            date: true,
-            agendaSoins: {
-              include: { soin: true },
-            },
-          },
         },
       },
     });
@@ -62,19 +53,34 @@ export async function GET(
       );
     }
 
+    // Récupérer l'agenda EN_ATTENTE lié au patient
+    const agendaEnAttente = await prisma.agenda.findFirst({
+      where: {
+        patientId: patient.id,
+        statut: "EN_ATTENTE",
+      },
+      include: {
+        agendaSoins: {
+          include: { soin: true },
+        },
+      },
+      orderBy: {
+        date: "desc", // si tu veux le plus récent
+      },
+    });
+
     if (user.role === "MEDECIN") {
       const specialiteIds = user.specialites.map((s) => s.id);
-      const soinsAutorises = patient.agendas.some((agenda) =>
-        agenda.agendaSoins.some((as) =>
-          specialiteIds.includes(as.soin.specialiteId)
-        )
+      const soinsAutorises = agendaEnAttente?.agendaSoins.some((as) =>
+        specialiteIds.includes(as.soin.specialiteId)
       );
+
       if (!soinsAutorises) {
         return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
       }
     }
 
-    return NextResponse.json(patient, { status: 200 });
+    return NextResponse.json({ patient, agendaEnAttente }, { status: 200 });
   } catch (error) {
     console.error("Erreur récupération patient :", error);
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });

@@ -15,7 +15,7 @@ export interface Personnel {
 export interface CreatePersonnelPayload {
   personnelEmail: string;
   telephone: string;
-  role: "MEDECIN" | "INFIRMIER" | "ADMINISTRATIF";
+  role: "MEDECIN" | "INFIRMIER" | "ADMIN" | "LABORANTIN" | "COMPTABLE" | "PHARMACIEN";
   nom: string;
   motdepasse: string;
   specialiteNom?: string;
@@ -26,7 +26,7 @@ export interface UpdatePersonnelPayload {
   id: string,
   personnelEmail: string;
   telephone: string;
-  role: "MEDECIN" | "INFIRMIER" | "ADMINISTRATIF";
+  role: "MEDECIN" | "INFIRMIER" | "ADMIN" | "LABORANTIN" | "COMPTABLE" | "PHARMACIEN";
   nom: string;
   specialiteNom?: string;
   image: string;

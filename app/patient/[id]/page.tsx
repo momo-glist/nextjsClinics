@@ -2,7 +2,7 @@
 
 import Wrapper from "@/app/components/Wrapper";
 import React, { useEffect, useState, useRef } from "react";
-import {useRouter, useParams } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { toast } from "react-toastify";
 import { v4 as uuidv4 } from "uuid";
 import { useUser } from "@clerk/nextjs";
@@ -16,6 +16,7 @@ const PatientDetailPage = () => {
   const email = user?.primaryEmailAddress?.emailAddress as string | undefined;
   const { id } = useParams();
   const [patient, setPatient] = useState<any>(null);
+  const [agendaEnAttente, setAgendaEnAttente] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [prescriptions, setPrescriptions] = useState<string[]>([""]);
   const [fichier, setFichier] = useState<File | null>(null);
@@ -54,7 +55,11 @@ const PatientDetailPage = () => {
           throw new Error("Erreur lors du chargement du patient.");
         }
         const data = await res.json();
-        setPatient(data);
+        setPatient(data.patient);
+        setAgendaEnAttente(data.agendaEnAttente);
+        setSelectedSoins(
+          data.agendaEnAttente?.agendaSoins.map((as: any) => as.soin.id) || []
+        );
       } catch (error: any) {
         toast.error(error.message || "Erreur inconnue.");
       } finally {
@@ -83,19 +88,14 @@ const PatientDetailPage = () => {
     setPrescriptions(nouvellesPrescriptions);
   };
 
-  // Enregistrer dans Consultation
   const handleSubmitConsultation = async () => {
+    setLoading(true);
+
     if (!prescriptions.length && !fichier) {
       toast.error(
         "Veuillez remplir au moins un champ (prescription ou fichier)."
       );
-      return;
-    }
-
-    if (!selectedSoins) {
-      toast.error(
-        "Veuillez sélectionner un soin à associer à la consultation."
-      );
+      setLoading(false);
       return;
     }
 
@@ -114,6 +114,7 @@ const PatientDetailPage = () => {
       if (uploadError) {
         console.error("Erreur d'upload :", uploadError.message);
         toast.error("Erreur lors de l'upload du fichier.");
+        setLoading(false);
         return;
       }
 
@@ -123,67 +124,98 @@ const PatientDetailPage = () => {
       fichierUrl = data.publicUrl;
     }
 
-    const formData = new FormData();
-    formData.append("patientId", String(id));
-    formData.append("prescription", prescriptions.join(" | "));
-    formData.append("soins", JSON.stringify(selectedSoins));
-    if (fichierUrl) {
-      formData.append("fichier", fichierUrl);
-    }
-
     try {
-      const res = await fetch("/api/consultation", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!res.ok) {
-        throw new Error("Erreur lors de l'enregistrement de la consultation.");
-      }
-
-      toast.success("Consultation enregistrée !");
-      router.push("/patient");
-    } catch (error: any) {
-      toast.error(error.message || "Erreur inconnue.");
-    }
-  };
-
-  // Enregistrer dans Agenda
-  const handleSubmitAgenda = async () => {
-    if (!prescriptions && !fichier) {
-      toast.error(
-        "Veuillez remplir au moins un champ (prescription ou fichier)."
+      const res = await fetch(
+        `/api/consultation/${agendaEnAttente?.id}/valider`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            fichier: fichierUrl,
+            remarque: prescriptions.join(" | "),
+            patientId: String(id),
+          }),
+        }
       );
-      return;
-    }
-
-    if (!selectedDate) {
-      toast.error("Veuillez choisir une date pour le rendez-vous.");
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append("patientId", String(id));
-    formData.append("prescription", prescriptions.join(" | "));
-    formData.append("date", selectedDate);
-    formData.append("soins", JSON.stringify(selectedSoins));
-
-    try {
-      const res = await fetch("/api/agenda", {
-        method: "POST",
-        body: formData,
-      });
 
       if (!res.ok) {
-        throw new Error("Erreur lors de l'enregistrement dans l'agenda.");
+        throw new Error("Erreur lors de la validation de l'agenda.");
       }
 
-      toast.success("Agenda enregistré !");
-      router.push("/patient");
+      toast.success("Agenda validé avec succès !");
+      router.push("/rendez-vous");
     } catch (error: any) {
       toast.error(error.message || "Erreur inconnue.");
+    } finally {
+      setLoading(false);
     }
   };
+
+const handleSubmitAgenda = async () => {
+  if (!prescriptions.length && !fichier) {
+    toast.error(
+      "Veuillez remplir au moins un champ (prescription ou fichier)."
+    );
+    return;
+  }
+
+  if (!selectedDate) {
+    toast.error("Veuillez choisir une date pour le rendez-vous.");
+    return;
+  }
+
+    let fichierUrl = null;
+
+    if (fichier) {
+      const safeFileName = `${uuidv4()}_${fichier.name.replace(/[^a-zA-Z0-9_.-]/g, "_")}`;
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from("fichier")
+        .upload(safeFileName, fichier, {
+          cacheControl: "3600",
+          upsert: false,
+        });
+
+      if (uploadError) {
+        console.error("Erreur d'upload :", uploadError.message);
+        toast.error("Erreur lors de l'upload du fichier.");
+        setLoading(false);
+        return;
+      }
+
+      const { data } = supabase.storage
+        .from("fichier")
+        .getPublicUrl(safeFileName);
+      fichierUrl = data.publicUrl;
+    }
+
+  try {
+    const res = await fetch("/api/agenda", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        patientId: id,
+        prescription: prescriptions.join(" | "),
+        date: selectedDate,
+        soins: selectedSoins,
+        fichier: fichierUrl || null,
+      }),
+    });
+
+    if (!res.ok) {
+      throw new Error("Erreur lors de l'enregistrement dans l'agenda.");
+    }
+
+    toast.success("Agenda enregistré !");
+    router.push("/rendez-vous");
+  } catch (error: any) {
+    toast.error(error.message || "Erreur inconnue.");
+  }
+};
 
   const ordonnanceRef = useRef<HTMLDivElement>(null);
 
@@ -266,34 +298,32 @@ const PatientDetailPage = () => {
           </span>
         </label>
         <div className="flex flex-wrap gap-4">
-          {patient?.agendas?.flatMap((agenda: any) =>
-            agenda.agendaSoins.map((as: any) => {
-              const soinId = as.soin.id;
-              const soinNom = as.soin.nom;
-              const isChecked = selectedSoins.includes(soinId);
+          {agendaEnAttente?.agendaSoins.map((as: any) => {
+            const soinId = as.soin.id;
+            const soinNom = as.soin.nom;
+            const isChecked = selectedSoins.includes(soinId);
 
-              return (
-                <label key={soinId} className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    value={soinId}
-                    checked={isChecked}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedSoins([...selectedSoins, soinId]);
-                      } else {
-                        setSelectedSoins(
-                          selectedSoins.filter((id) => id !== soinId)
-                        );
-                      }
-                    }}
-                    className="checkbox"
-                  />
-                  <span>{soinNom}</span>
-                </label>
-              );
-            })
-          )}
+            return (
+              <label key={soinId} className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  value={soinId}
+                  checked={isChecked}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSelectedSoins([...selectedSoins, soinId]);
+                    } else {
+                      setSelectedSoins(
+                        selectedSoins.filter((id) => id !== soinId)
+                      );
+                    }
+                  }}
+                  className="checkbox"
+                />
+                <span>{soinNom}</span>
+              </label>
+            );
+          })}
         </div>
       </div>
 
@@ -346,14 +376,15 @@ const PatientDetailPage = () => {
             {/* Boutons d'action */}
             <div className="flex flex-col sm:flex-row gap-2">
               <button
-                className="btn btn-primary"
+                className={`btn btn-primary ${loading ? "loading" : ""}`}
                 onClick={handleSubmitConsultation}
               >
                 ajouter la consultation
               </button>
               <button
-                className="btn btn-secondary"
+                className={`btn btn-secondary ${loading ? "loading" : ""}`}
                 onClick={() => setShowModal(true)}
+                disabled={loading}
               >
                 Ajouter à l'agenda
               </button>

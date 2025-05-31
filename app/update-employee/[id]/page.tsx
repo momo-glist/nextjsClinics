@@ -7,12 +7,15 @@ import { useRouter, useParams } from "next/navigation";
 import { toast } from "react-toastify";
 import PersonnelImage from "../../components/PersonnelImage";
 import { UpdatePersonnelPayload } from "@/app/type";
+import { v4 as uuidv4 } from "uuid";
+import { supabase } from "@/lib/supabaseClient";
 
 const Page = () => {
   const { user } = useUser();
   const email = user?.primaryEmailAddress?.emailAddress as string;
   const router = useRouter();
   const params = useParams();
+  const [loading, setLoading] = useState(true);
   const personnelId = params?.id as string;
 
   const [file, setFile] = useState<File | null>(null);
@@ -45,7 +48,6 @@ const Page = () => {
     fetchSpecialites();
   }, []);
 
-  // 🔄 Récupération des données employé
   useEffect(() => {
     const fetchPersonnel = async () => {
       try {
@@ -104,30 +106,43 @@ const Page = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      let imagePath = formData.image;
+    setLoading(true); 
 
-      // Si une nouvelle image est choisie, on l'upload
+    try {
+      let fichierUrl = formData.image;
+
       if (file) {
-        const imageData = new FormData();
-        imageData.append("file", file);
-        const res = await fetch("/api/uploads", {
-          method: "POST",
-          body: imageData,
-        });
-        const uploadRes = await res.json();
-        if (!uploadRes.success) {
-          throw new Error("Erreur upload");
+        const safeFileName = `${uuidv4()}_${file.name.replace(/[^a-zA-Z0-9_.-]/g, "_")}`;
+
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from("image")
+          .upload(safeFileName, file, {
+            cacheControl: "3600",
+            upsert: false,
+          });
+
+        if (uploadError) {
+          console.error("Erreur d'upload :", uploadError.message);
+          toast.error("Erreur lors de l'upload du fichier.");
+          setLoading(false);
+          return;
         }
-        imagePath = uploadRes.path;
+
+        // Récupération de l'URL publique du fichier
+        const { data } = supabase.storage
+          .from("image")
+          .getPublicUrl(safeFileName);
+
+        fichierUrl = data.publicUrl;
       }
 
+      // Envoi des données au backend
       const response = await fetch(`/api/employee/${personnelId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ ...formData, image: imagePath }),
+        body: JSON.stringify({ ...formData, image: fichierUrl }),
       });
 
       if (!response.ok) throw new Error("Erreur");
@@ -137,6 +152,8 @@ const Page = () => {
     } catch (error) {
       console.error(error);
       toast.error("Erreur lors de la mise à jour");
+    } finally {
+      setLoading(false);
     }
   };
 

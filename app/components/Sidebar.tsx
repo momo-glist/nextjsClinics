@@ -31,7 +31,6 @@ const Sidebar = () => {
     return 
   }
 
-  // Construction dynamique des liens selon le rôle et modules
   const navLinks = [
     {
       href: "/",
@@ -41,18 +40,18 @@ const Sidebar = () => {
       allowedRoles: ["ADMIN"],
     },
     {
+      href: "/rendez-vous",
+      label: "Rendez-vous",
+      icon: CalendarClock,
+      requiredModules: [],
+      allowedRoles: ["ADMIN", "MEDECIN", "INFIRMIER"],
+    },
+    {
       href: "/patient/create",
       label: "Ajouter un patient",
       icon: Stethoscope,
       requiredModules: [],
       allowedRoles: ["INFIRMIER"],
-    },
-    {
-      href: "/rendez-vous",
-      label: "Rendez-vous",
-      icon: CalendarClock,
-      requiredModules: [],
-      allowedRoles: ["ADMIN", "MEDECIN"],
     },
     { href: "/soins", label: "Soins", icon: Activity, requiredModules: [], allowedRoles: ["ADMIN"] },
     { href: "/specialite", label: "Spécialités", icon: FolderOpen, requiredModules: [], allowedRoles: ["ADMIN"] },

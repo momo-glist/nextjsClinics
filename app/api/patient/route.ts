@@ -298,7 +298,6 @@ export async function GET(req: NextRequest) {
   }
 }
 
-
 export async function PATCH(req: Request) {
   try {
     const { userId } = await auth();

@@ -10,7 +10,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
     }
 
-    const user = await prisma.user.findUnique({ where: { supabaseUserId: userId } });
+    const user = await prisma.user.findUnique({
+      where: { supabaseUserId: userId },
+    });
+
     if (!user) {
       return NextResponse.json(
         { error: "Utilisateur non trouvé" },
@@ -18,21 +21,20 @@ export async function POST(req: Request) {
       );
     }
 
-    const form = await req.formData();
-    const patientId = form.get("patientId") as string;
-    const dateString = form.get("date") as string;
-    const soinsString = form.get("soins") as string;
+    // Récupération des données au format JSON
+    const body = await req.json();
+    const { patientId, date, soins, fichier } = body;
 
-    if (!patientId || !dateString) {
+    if (!patientId || !date) {
       return NextResponse.json(
         { error: "patientId ou date manquant." },
         { status: 400 }
       );
     }
 
-    const date = new Date(dateString);
-    const soinsIds: string[] = soinsString ? JSON.parse(soinsString) : [];
+    const soinsIds: string[] = Array.isArray(soins) ? soins : [];
 
+    // Mise à jour de l'ancien agenda s'il existe
     const ancienAgenda = await prisma.agenda.findFirst({
       where: {
         patientId,
@@ -50,16 +52,17 @@ export async function POST(req: Request) {
       });
     }
 
+    // Création du nouvel agenda
     const nouveauAgenda = await prisma.agenda.create({
       data: {
-        date,
+        date: new Date(date),
         patientId,
-        userId : user.id,
+        userId: user.id,
         statut: "EN_ATTENTE",
+        fichier: fichier || null,
       },
     });
 
-    // Lien avec les soins
     if (soinsIds.length > 0) {
       await prisma.agendaSoin.createMany({
         data: soinsIds.map((soinId) => ({
