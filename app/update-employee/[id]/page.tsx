@@ -197,7 +197,9 @@ const Page = () => {
               <option value="">Choisir un rôle</option>
               <option value="MEDECIN">Médecin</option>
               <option value="INFIRMIER">Infirmier</option>
-              <option value="ADMINISTRATIF">Administratif</option>
+              <option value="ADMIN">Administratif</option>
+              <option value="PHARMACIEN">Pharmacien</option>
+              <option value="COMPTABLE">Comptable</option>
             </select>
 
             {formData.role === "MEDECIN" && (

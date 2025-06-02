@@ -7,7 +7,7 @@ import {
   ChevronRight,
   Stethoscope,
   CalendarClock,
-  Microscope,
+  PackagePlus,
   Activity,
   Cross,
   Pill,
@@ -15,6 +15,7 @@ import {
   Hospital,
   FolderOpen,
   Users,
+  Receipt,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -67,7 +68,21 @@ const Sidebar = () => {
       label: "Médicaments",
       icon: Pill,
       requiredModules: ["PHARMACIE"],
-      allowedRoles: ["ADMIN"],
+      allowedRoles: ["PHARMACIEN"],
+    },
+    {
+      href: "/stock",
+      label: "Stock de médicaments",
+      icon: PackagePlus,
+      requiredModules: ["PHARMACIE"],
+      allowedRoles: ["PHARMACIEN"],
+    },
+    {
+      href: "/vente",
+      label: "Vendre",
+      icon: Receipt,
+      requiredModules: ["PHARMACIE"],
+      allowedRoles: ["PHARMACIEN"],
     },
     {
       href: "/historiqueachat",

@@ -15,7 +15,7 @@ export interface Personnel {
 export interface CreatePersonnelPayload {
   personnelEmail: string;
   telephone: string;
-  role: "MEDECIN" | "INFIRMIER" | "ADMIN" | "LABORANTIN" | "COMPTABLE" | "PHARMACIEN";
+  role: "MEDECIN" | "INFIRMIER" | "ADMIN" | "COMPTABLE" | "PHARMACIEN";
   nom: string;
   motdepasse: string;
   specialiteNom?: string;
@@ -26,7 +26,7 @@ export interface UpdatePersonnelPayload {
   id: string,
   personnelEmail: string;
   telephone: string;
-  role: "MEDECIN" | "INFIRMIER" | "ADMIN" | "LABORANTIN" | "COMPTABLE" | "PHARMACIEN";
+  role: "MEDECIN" | "INFIRMIER" | "ADMIN" | "COMPTABLE" | "PHARMACIEN";
   nom: string;
   specialiteNom?: string;
   image: string;
@@ -159,3 +159,12 @@ export interface DashboardStats {
     value: number;
   }[];
 };
+
+export interface Stock {
+  nom: string;
+  forme: string;
+  dosage_valeur: number | string;
+  dosage_unite: string;
+  prix: number;
+  quantite: number;
+}

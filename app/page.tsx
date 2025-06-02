@@ -25,6 +25,12 @@ export default async function HomePage() {
     case "INFIRMIER":
       redirect("/rendez-vous");
       break;
+    case "PHARMACIEN":
+      redirect("/stock");
+      break;
+    case "COMPTABLE":
+      redirect("/charge");
+      break;
     case "ADMIN":
       // Ne rien faire, on affiche le dashboard
       break;
