@@ -159,6 +159,7 @@ export async function GET(req: Request) {
       );
     }
 
+
     const medicaments = await prisma.medicament.findMany({
       where: {
         cliniqueId: user.cliniqueId,

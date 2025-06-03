@@ -25,6 +25,17 @@ enum Role {
   AUTRE
 }
 
+enum Paiement {
+  ESPECE
+  ESPECE_ORANGE_MONEY
+  ESPECE_MOOV_MONEY
+  ESPECE_WAVE
+  ORANGE_MONEY
+  MOOV_MONEY
+  WAVE
+  COMPTE_BANCAIRE
+}
+
 enum ModuleNom {
   PHARMACIE
   COMPTABILITE
@@ -239,6 +250,7 @@ model Vente {
   cliniqueId   String
   clinique     Clinique      @relation(fields: [cliniqueId], references: [id])
   detailVentes DetailVente[]
+  mode         Paiement
 }
 
 model DetailVente {

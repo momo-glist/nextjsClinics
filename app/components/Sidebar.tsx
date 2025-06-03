@@ -64,13 +64,6 @@ const Sidebar = () => {
       allowedRoles: ["ADMIN"],
     },
     {
-      href: "/medicaments",
-      label: "Médicaments",
-      icon: Pill,
-      requiredModules: ["PHARMACIE"],
-      allowedRoles: ["PHARMACIEN"],
-    },
-    {
       href: "/stock",
       label: "Stock de médicaments",
       icon: PackagePlus,
@@ -83,13 +76,6 @@ const Sidebar = () => {
       icon: Receipt,
       requiredModules: ["PHARMACIE"],
       allowedRoles: ["PHARMACIEN"],
-    },
-    {
-      href: "/historiqueachat",
-      label: "Historique d'achat",
-      icon: History,
-      requiredModules: ["COMPTABILITE"],
-      allowedRoles: ["ADMIN"],
     },
     {
       href: "/employee",

@@ -168,3 +168,27 @@ export interface Stock {
   prix: number;
   quantite: number;
 }
+
+
+export interface PharmaDashboard {
+  chiffreDaffaire: number;
+  panierMoyen: number;
+  totalAchat: number;
+  nombreDeVentes: number;
+  totalMedVendus: number;
+  topVentes: {
+    medicamentId: string;
+    nom: string;
+    quantite: number;
+  }[];
+  produitsFaibles: {
+    id: string;
+    nom: string;
+    stock: number;
+    date_peremption: string;
+  }[];
+  evolutionVentes: {
+    date: string;
+    total: number;
+  }[];
+}

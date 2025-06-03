@@ -35,7 +35,6 @@ export default function DashboardClient() {
       try {
         const res = await fetch(`/api/dashboard?period=${selectedPeriod}`);
         const data = await res.json();
-        console.log("Données reçues du backend :", data);
         console.log(data);
         setStats(data);
       } catch (err) {
@@ -48,9 +47,6 @@ export default function DashboardClient() {
     fetchStats();
   }, [selectedPeriod]);
 
-  useEffect(() => {
-    console.log("Période sélectionnée :", selectedPeriod);
-  }, [selectedPeriod]);
 
   if (!stats) {
     return (

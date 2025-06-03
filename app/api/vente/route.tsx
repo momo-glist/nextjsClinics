@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import  prisma  from "@/lib/prisma"; 
+import prisma from "@/lib/prisma";
 
 export async function POST(req: Request) {
   try {
@@ -28,14 +28,14 @@ export async function POST(req: Request) {
 
     const cliniqueId = user.cliniqueId;
     const body = await req.json();
-    const { ventes } = body;
+    const { ventes, mode } = body;
 
     if (!cliniqueId || !Array.isArray(ventes) || ventes.length === 0) {
       return NextResponse.json({ error: "Données invalides" }, { status: 400 });
     }
 
     const total = ventes.reduce((sum: number, item: any) => {
-      return sum + item.quantite * item.prix_unitaire;
+      return sum + item.quantite * item.prix;
     }, 0);
 
     const vente = await prisma.$transaction(async (tx) => {
@@ -44,11 +44,12 @@ export async function POST(req: Request) {
           cliniqueId,
           date_vente: new Date(),
           total,
+          mode,
         },
       });
 
       for (const ligne of ventes) {
-        const { nom, quantite, prix_unitaire } = ligne;
+        const { nom, quantite, prix } = ligne;
 
         // 🔍 Trouver le médicament à partir de son nom
         const catalogue = await tx.catalogueMedicament.findFirst({
@@ -78,7 +79,7 @@ export async function POST(req: Request) {
         await tx.detailVente.create({
           data: {
             quantite,
-            prix_unitaire,
+            prix_unitaire: prix,
             medicamentId,
             venteId: venteCree.id,
           },
@@ -123,15 +124,14 @@ export async function POST(req: Request) {
       message: "Vente enregistrée avec succès",
       venteId: vente.id,
     });
-
   } catch (error: any) {
     console.error("[VENTE_POST_ERROR]", error);
 
-    if (error.message?.includes("Stock insuffisant") || error.message?.includes("Médicament")) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 400 }
-      );
+    if (
+      error.message?.includes("Stock insuffisant") ||
+      error.message?.includes("Médicament")
+    ) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
     return NextResponse.json(
