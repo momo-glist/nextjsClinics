@@ -12,12 +12,23 @@ export async function POST(req: Request) {
 
     const user = await prisma.user.findUnique({
       where: { supabaseUserId: userId },
+      select: {
+        id: true,
+        cliniqueId: true,
+      },
     });
 
     if (!user) {
       return NextResponse.json(
         { error: "Utilisateur non trouvé" },
         { status: 404 }
+      );
+    }
+
+    if (!user.cliniqueId) {
+      return NextResponse.json(
+        { error: "cliniqueId manquant pour l'utilisateur." },
+        { status: 400 }
       );
     }
 
@@ -50,6 +61,48 @@ export async function POST(req: Request) {
         where: { id: ancienAgenda.id },
         data: { statut: "CONFIRME" },
       });
+
+      // Récupérer les soins associés à l'ancien agenda
+      const soinsAgenda = await prisma.agendaSoin.findMany({
+        where: { agendaId: ancienAgenda.id },
+        include: {
+          soin: true,
+        },
+      });
+
+      if (soinsAgenda.length > 0) {
+        const totalPrix = soinsAgenda.reduce((sum, item) => {
+          return sum + (item.soin.prix ?? 0); // gestion du prix potentiellement null
+        }, 0);
+
+        const detailsData = soinsAgenda.map((item) => ({
+          soinId: item.soin.id,
+          prix: item.soin.prix ?? 0,
+        }));
+
+        const patient = await prisma.patient.findUnique({
+          where: { id: patientId },
+        });
+
+        if (!patient) {
+          return NextResponse.json(
+            { error: "Patient non trouvé" },
+            { status: 404 }
+          );
+        }
+
+        const facture = await prisma.facture.create({
+          data: {
+            patientId: patient.id,
+            cliniqueId: user.cliniqueId,
+            agendaId: ancienAgenda.id,
+            prix: totalPrix,
+            details: {
+              create: detailsData,
+            },
+          },
+        });
+      }
     }
 
     // Création du nouvel agenda

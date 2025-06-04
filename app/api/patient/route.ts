@@ -104,32 +104,6 @@ export async function POST(req: Request) {
       })),
     });
 
-    const totalPrix = soins.reduce(
-      (sum: number, soin: any) => sum + soin.prix,
-      0
-    );
-
-    const detailsData = soins.map((soin: any) => ({
-      soinId: soin.id,
-      prix: soin.prix,
-    }));
-
-    const facture = await prisma.facture.create({
-      data: {
-        patientId: patient.id,
-        cliniqueId: user.clinique.id,
-        agendaId: agenda.id,
-        prix: totalPrix,
-        details: {
-          create:
-            detailsData as Prisma.DetailFactureUncheckedCreateWithoutFactureInput[],
-        },
-      },
-      include: {
-        details: true,
-      },
-    });
-
     return NextResponse.json({ patient });
   } catch (error) {
     console.error("Erreur création patient:", error);

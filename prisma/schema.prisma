@@ -92,6 +92,7 @@ model Clinique {
   departements     Departement[]
   stockLots        StockLot[]
   factures         Facture[]
+  depenses         Depense[] 
 }
 
 model Invitation {
@@ -267,10 +268,19 @@ model Comptabilite {
   id         String   @id @default(uuid())
   mois       Int
   annee      Int
-  revenu     Float
-  depense    Float
+  revenu     Float // facultatif si calculé à la volée
+  depense    Float // idem
   cliniqueId String
-  clinique   Clinique @relation(fields: [cliniqueId], references: [id], onDelete: Cascade)
+  clinique   Clinique @relation(fields: [cliniqueId], references: [id])
+}
+
+model Depense {
+  id         String   @id @default(uuid())
+  libelle    String
+  montant    Float
+  date       DateTime @default(now())
+  cliniqueId String
+  clinique   Clinique @relation(fields: [cliniqueId], references: [id])
 }
 
 model Prescription {
@@ -284,7 +294,7 @@ model Prescription {
 model Facture {
   id         String   @id @default(uuid())
   patientId  String
-  cliniqueId String // pour récupérer nom, adresse, téléphone
+  cliniqueId String 
   date       DateTime @default(now())
 
   agendaId String? @unique

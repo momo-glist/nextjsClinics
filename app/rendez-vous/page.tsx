@@ -2,14 +2,10 @@
 
 import React, { useEffect, useState } from "react";
 import Wrapper from "../components/Wrapper";
-import {
-  Stethoscope,
-  BadgeCheck,
-  Syringe,
-  Baby,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
+import { Stethoscope, BadgeCheck, Syringe, Baby } from "lucide-react";
+import ModalRendezVousManques from "../components/RendezVousManques";
+import ModalReprogrammationRdv from "../components/ReprogrammationRdv";
+import { Rdv } from "../type";
 import { Patient, RendezVousAffiche, Utilisateur } from "../type";
 import Link from "next/link";
 import EmptyState from "../components/EmptyState";
@@ -79,6 +75,10 @@ const RdvPage = () => {
   const [rendezVous, setRendezVous] = useState<RendezVousAffiche[]>([]);
   const [currentWeekOffset, setCurrentWeekOffset] = useState(0);
   const [utilisateur, setUtilisateur] = useState<Utilisateur | null>(null);
+  const [rdvsDepasses, setRdvsDepasses] = useState<Rdv[]>([]);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalReprogOpen, setModalReprogOpen] = useState(false);
+  const [rdvAReprogrammer, setRdvAReprogrammer] = useState<Rdv | null>(null);
 
   useEffect(() => {
     const fetchUtilisateur = async () => {
@@ -103,69 +103,107 @@ const RdvPage = () => {
     fetchUtilisateur();
   }, []);
 
-async function fetchWeekAgendas(offset: number, utilisateur: Utilisateur) {
-  try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+  async function fetchWeekAgendas(offset: number, utilisateur: Utilisateur) {
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
 
-    const start = new Date(today);
-    start.setDate(start.getDate() + offset * 7);
+      const start = new Date(today);
+      start.setDate(start.getDate() + offset * 7);
 
-    const end = new Date(start);
-    end.setDate(end.getDate() + 6);
-    end.setHours(23, 59, 59, 999);
+      const end = new Date(start);
+      end.setDate(end.getDate() + 6);
+      end.setHours(23, 59, 59, 999);
 
-    const startISO = start.toISOString();
-    const endISO = end.toISOString();
+      const startISO = start.toISOString();
+      const endISO = end.toISOString();
 
-    const res = await fetch(`/api/patient?start=${startISO}&end=${endISO}`);
+      const res = await fetch(`/api/patient?start=${startISO}&end=${endISO}`);
 
-    if (!res.ok) {
-      console.error("Erreur API :", await res.json());
-      return;
-    }
+      if (!res.ok) {
+        console.error("Erreur API :", await res.json());
+        return;
+      }
 
-    const data = await res.json();
-    if (!Array.isArray(data)) {
-      console.error("La réponse attendue n'est pas un tableau :", data);
-      return;
-    }
+      const data = await res.json();
+      if (!Array.isArray(data)) {
+        console.error("La réponse attendue n'est pas un tableau :", data);
+        return;
+      }
 
-    const rdvs: RendezVousAffiche[] = [];
+      const rdvs: RendezVousAffiche[] = [];
 
-    data.forEach((patient: Patient) => {
-      patient.agendas.forEach((agenda) => {
-        const date = new Date(agenda.date);
+      data.forEach((patient: Patient) => {
+        patient.agendas.forEach((agenda) => {
+          const date = new Date(agenda.date);
 
-        const typesDeSoin = agenda.agendaSoins.map((a) => a.soin.nom);
-        const type = typesDeSoin.join(", ") || "Consultation";
-        const { couleur, icone } = getSoinStyle(
-          typesDeSoin[0] || "Consultation"
-        );
+          const typesDeSoin = agenda.agendaSoins.map((a) => a.soin.nom);
+          const type = typesDeSoin.join(", ") || "Consultation";
+          const { couleur, icone } = getSoinStyle(
+            typesDeSoin[0] || "Consultation"
+          );
 
-        rdvs.push({
-          jour: jours[date.getDay()],
-          heure: `${date.getHours().toString().padStart(2, "0")}:00`,
-          patient: `${patient.prenom} ${patient.nom}`,
-          type,
-          couleur,
-          icone,
-          patientId: patient.id,
+          rdvs.push({
+            jour: jours[date.getDay()],
+            heure: `${date.getHours().toString().padStart(2, "0")}:00`,
+            patient: `${patient.prenom} ${patient.nom}`,
+            type,
+            couleur,
+            icone,
+            patientId: patient.id,
+          });
         });
       });
-    });
 
-    setRendezVous(rdvs);
-  } catch (error) {
-    console.error("Erreur fetchAgendasForWeek :", error);
+      setRendezVous(rdvs);
+      try {
+        const resDepasses = await fetch("/api/agenda/rdvs-passes");
+        if (!resDepasses.ok) {
+          console.error("Erreur API RDVs dépassés :", await resDepasses.json());
+          return;
+        }
+
+        const dataDepasses = await resDepasses.json();
+        if (Array.isArray(dataDepasses) && dataDepasses.length > 0) {
+          setRdvsDepasses(dataDepasses);
+          setModalOpen(true);
+        } else {
+          setModalOpen(false);
+          setRdvsDepasses([]); 
+        }
+      } catch (error) {
+        console.error("Erreur fetch RDVs dépassés :", error);
+      }
+    } catch (error) {
+      console.error("Erreur fetchAgendasForWeek :", error);
+    }
   }
-}
 
+  function handleCloseModal() {
+    setModalOpen(false);
+  }
+
+  function handleReprogrammer(rdv: Rdv) {
+    setRdvAReprogrammer(rdv);
+    setModalReprogOpen(true);
+  }
+
+  const handleCloseReprogrammation = () => {
+    setModalReprogOpen(false);
+    setRdvAReprogrammer(null);
+  };
+
+  const handleReprogSuccess = () => {
+    if (utilisateur) {
+      fetchWeekAgendas(currentWeekOffset, utilisateur);
+    }
+    setModalReprogOpen(false);
+    setRdvAReprogrammer(null);
+  };
 
   useEffect(() => {
     if (utilisateur) {
       fetchWeekAgendas(currentWeekOffset, utilisateur);
-      console.log(currentWeekOffset)
     }
   }, [currentWeekOffset, utilisateur]);
 
@@ -260,8 +298,7 @@ async function fetchWeekAgendas(offset: number, utilisateur: Utilisateur) {
                               </Link>
                             ) : (
                               <div
-                                onClick={() => {
-                                }}
+                                onClick={() => {}}
                                 className={`rounded-xl p-3 ${rdv.couleur} shadow-sm cursor-pointer hover:shadow-md transition`}
                               >
                                 <div className="flex items-center gap-2 font-medium mb-1">
@@ -288,6 +325,18 @@ async function fetchWeekAgendas(offset: number, utilisateur: Utilisateur) {
       ) : (
         <EmptyState message={"Aucun Rendez vous"} IconComponent="Group" />
       )}
+      <ModalRendezVousManques
+        rdvs={rdvsDepasses}
+        open={modalOpen}
+        onCloseAction={handleCloseModal}
+        onReprogrammerAction={handleReprogrammer}
+      />
+      <ModalReprogrammationRdv
+        open={modalReprogOpen}
+        rdv={rdvAReprogrammer}
+        onCloseAction={handleCloseReprogrammation}
+        onSuccess={handleReprogSuccess}
+      />
     </Wrapper>
   );
 };
