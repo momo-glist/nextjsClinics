@@ -8,7 +8,6 @@ import {
   ResponsiveContainer,
   LineChart,
   Line,
-  CartesianGrid,
   XAxis,
   YAxis,
   Tooltip,
@@ -97,40 +96,49 @@ const Page = () => {
     }
   }
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  const produitsPagines = stats
+    ? stats.produitsFaibles.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage
+      )
+    : [];
+
+  const totalPages = stats
+    ? Math.ceil(stats.produitsFaibles.length / itemsPerPage)
+    : 0;
+
   return (
     <Wrapper>
-      <div className="p-4 md:p-6 space-y-6">
-        <h1 className="text-3xl font-bold mb-6 text-gray-800 text-primary">
-          Tableau de bord
-        </h1>
+      {loading ? (
+        <div className="text-center">Chargement...</div>
+      ) : !stats ? (
+        <EmptyState message="Aucune donnée disponible." IconComponent="Group" />
+      ) : (
+        <>
+          <div className="p-4 md:p-6 space-y-6">
+            <h1 className="text-3xl font-bold mb-6 text-gray-800 text-primary">
+              Tableau de bord
+            </h1>
 
-        <div className="flex items-center gap-4 mb-4">
-          <label htmlFor="period" className="font-medium text-gray-700">
-            Période :
-          </label>
-          <select
-            id="period"
-            value={selectedPeriod}
-            onChange={(e) => setSelectedPeriod(e.target.value)}
-            className="select select-bordered"
-          >
-            <option value="semaine">Semaine</option>
-            <option value="mois">Mois</option>
-            <option value="annee">Année</option>
-            <option value="tout">Tout</option>
-          </select>
-        </div>
-
-        {loading ? (
-          <div className="text-center">Chargement...</div>
-        ) : !stats ? (
-          <EmptyState
-            message="Aucune donnée disponible."
-            IconComponent="Group"
-          />
-        ) : (
-          <>
-            {/* KPI Cards */}
+            <div className="flex items-center gap-4 mb-4">
+              <label htmlFor="period" className="font-medium text-gray-700">
+                Période :
+              </label>
+              <select
+                id="period"
+                value={selectedPeriod}
+                onChange={(e) => setSelectedPeriod(e.target.value)}
+                className="select select-bordered"
+              >
+                <option value="semaine">Semaine</option>
+                <option value="mois">Mois</option>
+                <option value="annee">Année</option>
+                <option value="tout">Tout</option>
+              </select>
+            </div>
             <div className="flex justify-start gap-3 flex-wrap">
               {summaryData.map((item, index) => (
                 <div
@@ -199,7 +207,7 @@ const Page = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {stats.produitsFaibles.map((prod, index) => (
+                  {produitsPagines.map((prod, index) => (
                     <tr key={index}>
                       <td>{prod.nom}</td>
                       <td>{prod.stock}</td>
@@ -207,10 +215,33 @@ const Page = () => {
                   ))}
                 </tbody>
               </table>
+              <div className="flex justify-start items-center mt-4 gap-x-4">
+                <button
+                  className="btn btn-sm"
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.max(prev - 1, 1))
+                  }
+                  disabled={currentPage === 1}
+                >
+                  Précédent
+                </button>
+                <span className="text-sm">
+                  Page {currentPage} sur {totalPages}
+                </span>
+                <button
+                  className="btn btn-sm"
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                  }
+                  disabled={currentPage === totalPages}
+                >
+                  Suivant
+                </button>
+              </div>
             </div>
-          </>
-        )}
-      </div>
+          </div>
+        </>
+      )}
     </Wrapper>
   );
 };

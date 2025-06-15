@@ -277,6 +277,7 @@ model Comptabilite {
 model Depense {
   id         String   @id @default(uuid())
   libelle    String
+  categorie  String?
   montant    Float
   date       DateTime @default(now())
   cliniqueId String

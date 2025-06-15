@@ -161,21 +161,47 @@ const page = () => {
     )?.showModal();
   };
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  // Calcul des patients à afficher
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentPatients = specialites.slice(indexOfFirstItem, indexOfLastItem);
+
+  // Nombre total de pages
+  const totalPages = Math.ceil(specialites.length / itemsPerPage);
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage((prev) => prev + 1);
+    }
+  };
+
+  const handlePreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage((prev) => prev - 1);
+    }
+  };
+
   return (
     <Wrapper>
-      <div className="overflow-x-auto">
-        <div className="flex flex-col">
-          <span className="font-bold text-3xl text-primary tracking-wide mb-10">
-            Specialités
-          </span>
-          <div>
-            <div className="mb-4">
-              <button className="btn btn-primary" onClick={openCreateModal}>
-                Ajouter une specialité
-              </button>
-            </div>
-
-            {specialites.length > 0 ? (
+      {specialites.length > 0 ? (
+        <div className="overflow-x-auto">
+          <div className="flex flex-col">
+            <span className="font-bold text-3xl text-primary tracking-wide mb-10">
+              Specialités
+            </span>
+            <div>
+              <div className="mb-4">
+                <button
+                  className="btn btn-primary"
+                  onClick={openCreateModal}
+                  disabled={loading}
+                >
+                  Ajouter une specialité
+                </button>
+              </div>
               <table className="table">
                 <thead>
                   <tr>
@@ -186,7 +212,7 @@ const page = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {specialites.map((specialite: any, index: number) => (
+                  {currentPatients.map((specialite: any, index: number) => (
                     <tr key={specialite.id}>
                       <td>{index + 1}</td>
                       <td>{specialite.nom}</td>
@@ -209,15 +235,31 @@ const page = () => {
                   ))}
                 </tbody>
               </table>
-            ) : (
-              <EmptyState
-                message={"Aucune spécialité créé"}
-                IconComponent="Group"
-              />
-            )}
+              <div className="flex justify-around items-center mt-4 gap-x-4">
+                <button
+                  className="btn btn-sm"
+                  onClick={handlePreviousPage}
+                  disabled={currentPage === 1}
+                >
+                  Précédent
+                </button>
+                <span className="text-sm">
+                  Page {currentPage} sur {totalPages}
+                </span>
+                <button
+                  className="btn btn-sm"
+                  onClick={handleNextPage}
+                  disabled={currentPage === totalPages}
+                >
+                  Suivant
+                </button>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      ) : (
+        <EmptyState message={"Aucune spécialité créé"} IconComponent="Group" />
+      )}
 
       <SpecialiteModal
         nom={nom}

@@ -15,7 +15,7 @@ const Page = () => {
   const email = user?.primaryEmailAddress?.emailAddress as string;
   const router = useRouter();
   const params = useParams();
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const personnelId = params?.id as string;
 
   const [file, setFile] = useState<File | null>(null);
@@ -226,7 +226,7 @@ const Page = () => {
               onChange={handleFileChange}
             />
 
-            <button className="btn btn-primary mt-3" type="submit">
+            <button className="btn btn-primary mt-3" type="submit" disabled={loading}>
               Mettre à jour
             </button>
           </form>

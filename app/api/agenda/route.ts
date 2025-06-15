@@ -133,24 +133,58 @@ export async function POST(req: Request) {
   }
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
     }
 
-    const agendas = await prisma.agenda.findMany({
-      where: { userId },
-      include: {
-        patient: true,
+    const { searchParams } = new URL(req.url);
+    const dateString = searchParams.get("date");
+
+    if (!dateString) {
+      return NextResponse.json({ error: "Date manquante" }, { status: 400 });
+    }
+
+    const selectedDay = new Date(dateString);
+    const start = new Date(selectedDay.setHours(0, 0, 0, 0));
+    const end = new Date(selectedDay.setHours(23, 59, 59, 999));
+
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [{ supabaseUserId: userId }, { id: userId }],
       },
-      orderBy: { date: "asc" },
+      select: {
+        id: true,
+        cliniqueId: true,
+      },
     });
 
-    return NextResponse.json(agendas, { status: 200 });
+    if (!user?.cliniqueId) {
+      return NextResponse.json({ error: "Clinique non trouvée" }, { status: 404 });
+    }
+
+    const agendas = await prisma.agenda.findMany({
+      where: {
+        user: {
+          cliniqueId: user.cliniqueId,
+        },
+        date: {
+          gte: start,
+          lte: end,
+        },
+      },
+      select: {
+        date: true,
+      },
+    });
+
+    return NextResponse.json({
+      times: agendas.map((a) => a.date),
+    });
   } catch (error) {
-    console.error("Erreur récupération agendas:", error);
+    console.error("Erreur serveur :", error);
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }

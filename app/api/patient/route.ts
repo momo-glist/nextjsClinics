@@ -89,6 +89,20 @@ export async function POST(req: Request) {
       },
     });
 
+    const rendezVousExiste = await prisma.agenda.findFirst({
+      where: {
+        date: scheduledDate,
+        userId: user.id,
+      },
+    });
+
+    if (rendezVousExiste) {
+      return NextResponse.json(
+        { error: "Un rendez-vous existe déjà à cette heure." },
+        { status: 400 }
+      );
+    }
+
     const agenda = await prisma.agenda.create({
       data: {
         date: scheduledDate,
@@ -267,7 +281,10 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(patients, { status: 200 });
   } catch (error) {
-    console.error("Erreur récupération patients avec agendas en attente:", error);
+    console.error(
+      "Erreur récupération patients avec agendas en attente:",
+      error
+    );
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }

@@ -200,11 +200,11 @@ const Page = () => {
               />
 
               {suggestionsByIndex[index]?.length > 0 && (
-                <ul className="absolute z-10 bg-white border mt-1 w-full max-h-40 overflow-y-auto shadow">
+                <ul className="absolute z-20 w-full mt-1 max-h-60 overflow-y-auto bg-base-100 border border-base-300 rounded-box shadow-lg divide-y divide-base-200">
                   {suggestionsByIndex[index].map((med) => (
                     <li
                       key={med.id}
-                      className="p-2 hover:bg-gray-100 cursor-pointer"
+                      className="p-3 hover:bg-primary hover:text-white cursor-pointer transition-all duration-150"
                       onClick={() => {
                         const updated = [...ventes];
                         updated[index] = {

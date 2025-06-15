@@ -29,7 +29,7 @@ export default async function HomePage() {
       redirect("/stock");
       break;
     case "COMPTABLE":
-      redirect("/charge");
+      redirect("/charges");
       break;
     case "ADMIN":
       // Ne rien faire, on affiche le dashboard

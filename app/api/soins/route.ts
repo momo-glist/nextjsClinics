@@ -95,7 +95,10 @@ export async function GET() {
       },
       include: {
         specialite: {
-          select: { nom: true },
+          select: {
+            id: true,
+            nom: true,
+          },
         },
       },
     });
@@ -104,9 +107,12 @@ export async function GET() {
     const formattedSoins = soins.map((soin) => ({
       id: soin.id,
       nom: soin.nom,
+      description: soin.description,
       prix: soin.prix,
-      specialite: soin.specialite.nom,
+      specialite: soin.specialite,
     }));
+
+    console.log(formattedSoins);
 
     return NextResponse.json(formattedSoins, { status: 200 });
   } catch (error) {

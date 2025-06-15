@@ -52,7 +52,7 @@ export interface Soin {
   id: string;
   nom: string;
   description: string;
-  specialite: Specialite | null;
+  specialite: Specialite;
   prix: string
 }
 
@@ -79,6 +79,9 @@ export interface Patient  {
   id: string,
   nom: string;
   prenom: string;
+  age: string;
+  adresse: string;
+  nombreConsultationsConfirmees: number;
   agendas: Agenda[];
 };
 
@@ -161,6 +164,7 @@ export interface DashboardStats {
 };
 
 export interface Stock {
+  id: string;
   nom: string;
   forme: string;
   dosage_valeur: number | string;
@@ -192,3 +196,11 @@ export interface PharmaDashboard {
     total: number;
   }[];
 }
+
+export interface LigneComptaParJour {
+  libelle: string;
+  categorie: string;
+  montant: number;
+  date: string;
+}
+

@@ -10,6 +10,7 @@ import InvoicePDF from "@/app/components/InvoicePDF";
 import { useUser } from "@clerk/nextjs";
 import { getUtilisateur } from "@/app/action";
 import { Clinique } from "@/app/type";
+import DatePickerAgenda from "@/app/components/DatePicker";
 
 const CreatePatientPage = () => {
   const { user } = useUser();
@@ -18,7 +19,20 @@ const CreatePatientPage = () => {
   const [soinsDisponibles, setSoinsDisponibles] = useState<Soin[]>([]);
   const [prixSoins, setPrixSoins] = useState<{ [soinId: string]: number }>({});
   const [searchTerm, setSearchTerm] = useState("");
-  const [formData, setFormData] = useState({
+  type FormDataType = {
+    nom: string;
+    prenom: string;
+    age: string;
+    telephone: string;
+    adresse: string;
+    temperature: string;
+    tension: string;
+    poids: string;
+    date: string | null; // ✅ le vrai correctif ici
+    soins: string[];
+  };
+
+  const [formData, setFormData] = useState<FormDataType>({
     nom: "",
     prenom: "",
     age: "",
@@ -27,8 +41,8 @@ const CreatePatientPage = () => {
     temperature: "",
     tension: "",
     poids: "",
-    date: "",
-    soins: [] as string[],
+    date: null,
+    soins: [],
   });
 
   const [clinique, setClinique] = useState<Clinique | null>(null);
@@ -148,7 +162,6 @@ const CreatePatientPage = () => {
     }));
 
     try {
-      // 👉 1. Création du patient
       const patientRes = await fetch("/api/patient", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -189,7 +202,7 @@ const CreatePatientPage = () => {
         }
       }
 
-      // 👉 3. Génération de la facture en PDF
+      // 3. Génération de la facture en PDF
       // const invoiceElement = invoiceRef.current;
       // if (invoiceElement) {
       //   const canvas = await html2canvas(invoiceElement, {
@@ -208,8 +221,7 @@ const CreatePatientPage = () => {
       //   pdf.save("facture.pdf");
       // }
 
-      // ✅ Reset après succès
-      toast.success("Patient, agenda et facture enregistrés avec succès");
+      toast.success("Le rendez-vous a été ajouté avec succès");
 
       setFormData({
         nom: "",
@@ -220,7 +232,7 @@ const CreatePatientPage = () => {
         temperature: "",
         tension: "",
         poids: "",
-        date: "",
+        date: null,
         soins: [],
       });
       setPrixSoins({});
@@ -316,12 +328,11 @@ const CreatePatientPage = () => {
                 value={formData.poids}
                 onChange={handleChange}
               />
-              <input
-                type="datetime-local"
-                name="date"
-                className="input input-bordered w-full"
-                value={formData.date}
-                onChange={handleChange}
+              <DatePickerAgenda
+                date={formData.date}
+                setDate={(newDate) =>
+                  setFormData((prev) => ({ ...prev, date: newDate }))
+                }
               />
 
               {/* Recherche et sélection des soins */}
@@ -424,7 +435,7 @@ const CreatePatientPage = () => {
             nom={formData.nom}
             prenom={formData.prenom}
             adresse={formData.adresse}
-            date={formData.date}
+            date={formData.date || ""}
             soins={formData.soins.map((id) => ({
               nom: soinsDisponibles.find((s) => s.id === id)?.nom || "",
               prix: prixSoins[id] || 0,

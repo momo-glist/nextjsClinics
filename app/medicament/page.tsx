@@ -23,15 +23,17 @@ const CreateMedicamentPage = () => {
     register,
     handleSubmit,
     reset,
-    formState: { errors }
+    formState: { errors },
   } = useForm<FormData>();
+  const [loading, setLoading] = useState(false);
 
   const onSubmit = async (data: FormData) => {
+    setLoading(true);
     try {
       const res = await fetch("/api/stock", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
+        body: JSON.stringify(data),
       });
 
       const result = await res.json();
@@ -39,14 +41,62 @@ const CreateMedicamentPage = () => {
       if (res.ok) {
         toast.success("Médicament créé avec succès !");
         reset();
+        setLoading(false);
       } else {
-        toast.error(result.error || "Une erreur est survenue lors de la création du médicament.");
+        toast.error(
+          result.error ||
+            "Une erreur est survenue lors de la création du médicament."
+        );
+        setLoading(false);
       }
     } catch (error) {
       console.error(error);
       toast.error("Erreur serveur lors de la création du médicament.");
     }
   };
+  const formesPharmaceutiques = [
+    { value: "comprimé", label: "Comprimé" },
+    { value: "comprimé effervescent", label: "Comprimé effervescent" },
+    { value: "gélule", label: "Gélule" },
+    { value: "capsule", label: "Capsule" },
+    { value: "sirop", label: "Sirop" },
+    { value: "solution buvable", label: "Solution buvable" },
+    { value: "suspension buvable", label: "Suspension buvable" },
+    { value: "pommade", label: "Pommade" },
+    { value: "crème", label: "Crème" },
+    { value: "gel", label: "Gel" },
+    { value: "collyre", label: "Collyre (gouttes ophtalmiques)" },
+    { value: "goutte nasale", label: "Goutte nasale" },
+    { value: "suppositoire", label: "Suppositoire" },
+    { value: "ovule", label: "Ovule" },
+    { value: "patch", label: "Patch" },
+    { value: "aérosol", label: "Aérosol" },
+    { value: "injectable", label: "Solution injectable" },
+    { value: "poudre", label: "Poudre" },
+    { value: "granulé", label: "Granulé" },
+    { value: "spray", label: "Spray" },
+    { value: "mousse", label: "Mousse" },
+  ];
+
+  const unitesPharmaceutiques = [
+    { value: "mg", label: "mg (milligramme)" },
+    { value: "g", label: "g (gramme)" },
+    { value: "µg", label: "µg (microgramme)" },
+    { value: "kg", label: "kg (kilogramme)" },
+    { value: "mL", label: "mL (millilitre)" },
+    { value: "L", label: "L (litre)" },
+    { value: "UI", label: "UI (Unité Internationale)" },
+    { value: "cp", label: "cp (comprimé)" },
+    { value: "gél", label: "gél (gélule)" },
+    { value: "amp", label: "amp (ampoule)" },
+    { value: "sachet", label: "sachet" },
+    { value: "flacon", label: "flacon" },
+    { value: "tube", label: "tube" },
+    { value: "spray", label: "spray" },
+    { value: "dose", label: "dose" },
+    { value: "pulvérisation", label: "pulvérisation" },
+    { value: "goutte", label: "goutte" },
+  ];
 
   return (
     <Wrapper>
@@ -66,12 +116,17 @@ const CreateMedicamentPage = () => {
 
           <div>
             <label className="label">Forme</label>
-            <input
-              type="text"
-              placeholder="Ex : Comprimé, Sirop"
-              className="input input-bordered w-full"
+            <select
+              className="select select-bordered w-full"
               {...register("forme", { required: "La forme est requise" })}
-            />
+            >
+              <option value="">-- Sélectionner une forme --</option>
+              {formesPharmaceutiques.map((forme) => (
+                <option key={forme.value} value={forme.value}>
+                  {forme.label}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="flex space-x-4">
@@ -83,18 +138,25 @@ const CreateMedicamentPage = () => {
                 className="input input-bordered w-full"
                 {...register("dosage_valeur", {
                   required: "Le dosage est requis",
-                  valueAsNumber: true
+                  valueAsNumber: true,
                 })}
               />
             </div>
             <div className="flex-1">
               <label className="label">Unité</label>
-              <input
-                type="text"
-                placeholder="Ex : mg, ml"
-                className="input input-bordered w-full"
-                {...register("dosage_unite", { required: "L'unité est requise" })}
-              />
+              <select
+                className="select select-bordered w-full"
+                {...register("dosage_unite", {
+                  required: "L'unité est requise",
+                })}
+              >
+                <option value="">-- Sélectionner une unité --</option>
+                {unitesPharmaceutiques.map((unite) => (
+                  <option key={unite.value} value={unite.value}>
+                    {unite.label}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
@@ -104,7 +166,9 @@ const CreateMedicamentPage = () => {
               type="text"
               placeholder="Nom du laboratoire"
               className="input input-bordered w-full"
-              {...register("laboratoire", { required: "Le laboratoire est requis" })}
+              {...register("laboratoire", {
+                required: "Le laboratoire est requis",
+              })}
             />
           </div>
 
@@ -128,7 +192,7 @@ const CreateMedicamentPage = () => {
               className="input input-bordered w-full"
               {...register("prix", {
                 required: "Le prix est requis",
-                valueAsNumber: true
+                valueAsNumber: true,
               })}
             />
           </div>
@@ -142,7 +206,7 @@ const CreateMedicamentPage = () => {
               className="input input-bordered w-full"
               {...register("quantite", {
                 required: "La quantité est requise",
-                valueAsNumber: true
+                valueAsNumber: true,
               })}
             />
           </div>
@@ -155,7 +219,7 @@ const CreateMedicamentPage = () => {
               className="input input-bordered w-full"
               {...register("prix_unitaire", {
                 required: "Le prix unitaire d'achat est requis",
-                valueAsNumber: true
+                valueAsNumber: true,
               })}
             />
           </div>
@@ -165,11 +229,17 @@ const CreateMedicamentPage = () => {
             <input
               type="date"
               className="input input-bordered w-full"
-              {...register("date_peremption", { required: "La date de péremption est requise" })}
+              {...register("date_peremption", {
+                required: "La date de péremption est requise",
+              })}
             />
           </div>
 
-          <button type="submit" className="btn btn-primary w-full">
+          <button
+            type="submit"
+            className="btn btn-primary w-full"
+            disabled={loading}
+          >
             Créer le médicament
           </button>
         </form>

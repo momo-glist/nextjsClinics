@@ -201,21 +201,43 @@ const page = () => {
     )?.showModal();
   };
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  // Calcul des patients à afficher
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentPatients = soins.slice(indexOfFirstItem, indexOfLastItem);
+
+  // Nombre total de pages
+  const totalPages = Math.ceil(soins.length / itemsPerPage);
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage((prev) => prev + 1);
+    }
+  };
+
+  const handlePreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage((prev) => prev - 1);
+    }
+  };
+
   return (
     <Wrapper>
-      <div className="overflow-x-auto">
-        <div className="flex flex-col">
-          <span className="font-bold text-3xl text-primary tracking-wide mb-10">
-            Soins
-          </span>
-          <div>
-            <div className="mb-4">
-              <button className="btn btn-primary" onClick={openCreateModal}>
-                Ajouter un soin
-              </button>
-            </div>
-
-            {soins.length > 0 ? (
+      {soins.length > 0 ? (
+        <div className="overflow-x-auto">
+          <div className="flex flex-col">
+            <span className="font-bold text-3xl text-primary tracking-wide mb-10">
+              Soins
+            </span>
+            <div>
+              <div className="mb-4">
+                <button className="btn btn-primary" onClick={openCreateModal}>
+                  Ajouter un soin
+                </button>
+              </div>
               <table className="table">
                 <thead>
                   <tr>
@@ -228,9 +250,9 @@ const page = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {soins.map((soin: any, index: number) => (
+                  {currentPatients.map((soin: any, index: number) => (
                     <tr key={soin.id}>
-                      <td>{index + 1}</td>
+                      <td>{indexOfFirstItem + index + 1}</td>
                       <td>{soin.nom}</td>
                       <td>{soin.description}</td>
                       <td>{soin.specialite?.nom}</td>
@@ -253,12 +275,31 @@ const page = () => {
                   ))}
                 </tbody>
               </table>
-            ) : (
-              <EmptyState message={"Aucun soin créé"} IconComponent="Group" />
-            )}
+              <div className="flex justify-around items-center mt-4 gap-x-4">
+                <button
+                  className="btn btn-sm"
+                  onClick={handlePreviousPage}
+                  disabled={currentPage === 1}
+                >
+                  Précédent
+                </button>
+                <span className="text-sm">
+                  Page {currentPage} sur {totalPages}
+                </span>
+                <button
+                  className="btn btn-sm"
+                  onClick={handleNextPage}
+                  disabled={currentPage === totalPages}
+                >
+                  Suivant
+                </button>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      ) : (
+        <EmptyState message={"Aucun soin créé"} IconComponent="Group" />
+      )}
 
       <SoinModal
         nom={nom}

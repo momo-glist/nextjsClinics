@@ -10,12 +10,11 @@ import {
   PackagePlus,
   Activity,
   Cross,
-  Pill,
-  History,
   Hospital,
   FolderOpen,
   Users,
   Receipt,
+  Wallet,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -46,6 +45,13 @@ const Sidebar = () => {
       icon: CalendarClock,
       requiredModules: [],
       allowedRoles: ["ADMIN", "MEDECIN", "INFIRMIER"],
+    },
+    {
+      href: "/patients",
+      label: "Patients",
+      icon: CalendarClock,
+      requiredModules: [],
+      allowedRoles: ["ADMIN"],
     },
     {
       href: "/patient/create",
@@ -83,6 +89,13 @@ const Sidebar = () => {
       icon: Users,
       requiredModules: [],
       allowedRoles: ["ADMIN"],
+    },
+    {
+      href: "/charges",
+      label: "Charges",
+      icon: Wallet,
+      requiredModules: [],
+      allowedRoles: ["COMPTABLE"],
     },
   ];
 

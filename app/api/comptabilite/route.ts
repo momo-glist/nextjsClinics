@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { LigneComptaParJour } from "@/app/type";
 
 export async function GET(req: Request) {
   try {
@@ -19,17 +20,24 @@ export async function GET(req: Request) {
     });
 
     if (!user || !user.cliniqueId) {
-      return NextResponse.json({ error: "Utilisateur ou cliniqueId manquant" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Utilisateur ou cliniqueId manquant" },
+        { status: 400 }
+      );
     }
 
     const { searchParams } = new URL(req.url);
     const mois = searchParams.get("mois");
     const annee = searchParams.get("annee");
-    const cliniqueId = searchParams.get("cliniqueId");
 
-    if (!mois || !annee || !cliniqueId) {
-      return NextResponse.json({ error: "Paramètres manquants : mois, annee, cliniqueId" }, { status: 400 });
+    if (!mois || !annee) {
+      return NextResponse.json(
+        { error: "Paramètres manquants : mois, annee" },
+        { status: 400 }
+      );
     }
+
+    const cliniqueId = user.cliniqueId;
 
     const moisInt = parseInt(mois);
     const anneeInt = parseInt(annee);
@@ -98,6 +106,167 @@ export async function GET(req: Request) {
       });
     }
 
+    // Étape 1: récupérer toutes les données individuelles
+    const factures = await prisma.facture.findMany({
+      where: {
+        cliniqueId,
+        date: {
+          gte: debutMois,
+          lte: finMois,
+        },
+      },
+      select: {
+        date: true,
+        prix: true,
+        details: {
+          select: {
+            soin: {
+              select: {
+                specialite: {
+                  select: {
+                    nom: true,
+                  },
+                },
+              },
+            },
+            prix: true,
+          },
+        },
+      },
+    });
+
+    const ventes = await prisma.vente.findMany({
+      where: {
+        cliniqueId,
+        date_vente: {
+          gte: debutMois,
+          lte: finMois,
+        },
+      },
+      select: {
+        date_vente: true,
+        total: true,
+      },
+    });
+
+    const depensesList = await prisma.depense.findMany({
+      where: {
+        cliniqueId,
+        date: {
+          gte: debutMois,
+          lte: finMois,
+        },
+      },
+      select: {
+        libelle: true,
+        date: true,
+        montant: true,
+      },
+    });
+
+    // Étape 2: on regroupe tout par date
+    type LigneCompta = {
+      date: string;
+      consultation: number;
+      pharmacie: number;
+      depenses: { nom: string; montant: number; categorie?: string }[];
+      consultations: { montant: number; specialite: string }[]; // ← ici
+    };
+
+    const mapParJour: Record<string, LigneCompta> = {};
+
+    for (const f of factures) {
+      const d = f.date.toISOString().slice(0, 10);
+
+      if (!mapParJour[d]) {
+        mapParJour[d] = {
+          date: d,
+          consultation: 0,
+          pharmacie: 0,
+          depenses: [],
+          consultations: [],
+        };
+      }
+
+      mapParJour[d].consultation += f.prix;
+
+      for (const detail of f.details) {
+        const specialiteNom = detail.soin?.specialite?.nom ?? "Inconnue";
+
+        mapParJour[d].consultations.push({
+          montant: detail.prix,
+          specialite: specialiteNom,
+        });
+      }
+    }
+
+    for (const v of ventes) {
+      const d = v.date_vente.toISOString().slice(0, 10);
+      if (!mapParJour[d])
+        mapParJour[d] = {
+          date: d,
+          consultation: 0,
+          pharmacie: 0,
+          depenses: [],
+          consultations: [], // ✅ à ajouter
+        };
+
+      mapParJour[d].pharmacie += v.total;
+    }
+
+    for (const dep of depensesList) {
+      const d = dep.date.toISOString().slice(0, 10);
+      if (!mapParJour[d])
+        mapParJour[d] = {
+          date: d,
+          consultation: 0,
+          pharmacie: 0,
+          depenses: [],
+          consultations: [], // ✅ à ajouter
+        };
+
+      mapParJour[d].depenses.push({
+        nom: dep.libelle || "Dépense",
+        montant: dep.montant,
+      });
+    }
+
+    // Étape 3: transformer en tableau trié
+    const listeComptaParJour = Object.values(mapParJour).sort((a, b) =>
+      a.date < b.date ? -1 : 1
+    );
+
+    const listeComptaParJourTransformee: LigneComptaParJour[] = [];
+
+    for (const ligne of Object.values(mapParJour)) {
+      for (const consultation of ligne.consultations) {
+        listeComptaParJourTransformee.push({
+          libelle: "Consultation",
+          categorie: consultation.specialite,
+          montant: consultation.montant,
+          date: ligne.date,
+        });
+      }
+
+      if (ligne.pharmacie > 0) {
+        listeComptaParJourTransformee.push({
+          libelle: "Pharmacie",
+          categorie: "Pharmacie",
+          montant: ligne.pharmacie,
+          date: ligne.date,
+        });
+      }
+
+      for (const dep of ligne.depenses) {
+        listeComptaParJourTransformee.push({
+          libelle: dep.nom,
+          categorie: dep.categorie ?? "Autre",
+          montant: -dep.montant,
+          date: ligne.date,
+        });
+      }
+    }
+
     return NextResponse.json({
       mois: moisInt,
       annee: anneeInt,
@@ -107,11 +276,17 @@ export async function GET(req: Request) {
       totalRevenus,
       depenses,
       soldeNet,
+      listeComptaParJour: listeComptaParJourTransformee.sort(
+        (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+      ),
       comptabiliteCreee: !comptabiliteExistante,
     });
   } catch (error) {
     console.error("Erreur API Comptabilite :", error);
-    return NextResponse.json({ error: "Erreur interne du serveur" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Erreur interne du serveur" },
+      { status: 500 }
+    );
   }
 }
 
@@ -136,7 +311,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { libelle, montant, date } = body;
+    const { libelle, categorie, montant, date } = body;
 
     // Validation
     if (!libelle || !montant) {
@@ -149,6 +324,7 @@ export async function POST(req: Request) {
     const nouvelleDepense = await prisma.depense.create({
       data: {
         libelle,
+        categorie,
         montant: parseFloat(montant),
         date: date ? new Date(date) : new Date(),
         cliniqueId: user.cliniqueId,
@@ -164,4 +340,3 @@ export async function POST(req: Request) {
     );
   }
 }
-

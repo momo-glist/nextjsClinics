@@ -176,3 +176,56 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Erreur serveur." }, { status: 500 });
   }
 }
+
+export async function PATCH(req: Request) {
+  try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    }
+
+    const body = await req.json();
+    const { id, quantite } = body; // ici `id` est l'ID de catalogueMed
+    const parsedQuantite = parseInt(quantite);
+
+    if (!id || isNaN(parsedQuantite)) {
+      return NextResponse.json({ error: "Données invalides" }, { status: 400 });
+    }
+
+    // Trouver le médicament par id de catalogue
+    const medicament = await prisma.medicament.findFirst({
+      where: {
+        catalogueMedId: id,
+      },
+      include: {
+        stockLots: true,
+      },
+    });
+
+    if (!medicament) {
+      return NextResponse.json({ error: "Médicament introuvable" }, { status: 404 });
+    }
+
+    // Récupérer le premier lot de stock existant
+    const lot = medicament.stockLots[0];
+    if (!lot) {
+      return NextResponse.json({ error: "Aucun lot de stock trouvé pour ce médicament" }, { status: 404 });
+    }
+
+    // Mise à jour de la quantité
+    await prisma.stockLot.update({
+      where: {
+        id: lot.id,
+      },
+      data: {
+        quantite: lot.quantite + parsedQuantite,
+      },
+    });
+
+    return NextResponse.json({ message: "Stock mis à jour avec succès" });
+  } catch (error) {
+    console.error("[PATCH_STOCK_ERROR]", error);
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+  }
+}
+

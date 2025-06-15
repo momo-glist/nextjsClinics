@@ -15,6 +15,7 @@ const Page = () => {
   const { user } = useUser();
   const email = user?.primaryEmailAddress?.emailAddress as string;
   const router = useRouter();
+  const [loading, setLoading] = useState(false);
 
   const [personnels, setPersonnels] = useState<Personnel[]>([]);
 
@@ -51,24 +52,48 @@ const Page = () => {
     }
   };
 
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
+  
+    // Calcul des patients à afficher
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    const currentPatients = personnels.slice(indexOfFirstItem, indexOfLastItem);
+  
+    // Nombre total de pages
+    const totalPages = Math.ceil(personnels.length / itemsPerPage);
+  
+    const handleNextPage = () => {
+      if (currentPage < totalPages) {
+        setCurrentPage((prev) => prev + 1);
+      }
+    };
+  
+    const handlePreviousPage = () => {
+      if (currentPage > 1) {
+        setCurrentPage((prev) => prev - 1);
+      }
+    };
+
   return (
     <Wrapper>
-      <div className="overflow-x-auto">
-        <div className="flex flex-col">
-          <span className="font-bold text-3xl text-primary tracking-wide mb-10">
-            Employés
-          </span>
-          <div>
-            <div className="mb-4">
-              <button
-                className="btn btn-primary"
-                onClick={() => router.push("/new-employee")}
-              >
-                Ajouter un Employé
-              </button>
-            </div>
+      {personnels.length > 0 ? (
+        <div className="overflow-x-auto">
+          <div className="flex flex-col">
+            <span className="font-bold text-3xl text-primary tracking-wide mb-10">
+              Employés
+            </span>
+            <div>
+              <div className="mb-4">
+                <button
+                  className="btn btn-primary"
+                  onClick={() => router.push("/new-employee")}
+                  disabled={loading}
+                >
+                  Ajouter un Employé
+                </button>
+              </div>
 
-            {personnels.length > 0 ? (
               <table className="table">
                 <thead>
                   <tr>
@@ -83,7 +108,7 @@ const Page = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {personnels.map((personnel: any, index: number) => (
+                  {currentPatients.map((personnel: any, index: number) => (
                     <tr key={personnel.id}>
                       <td>{index + 1}</td>
                       <td>
@@ -100,7 +125,9 @@ const Page = () => {
                       <td>{personnel.role}</td>
                       <td>
                         {personnel.specialites.length > 0
-                          ? personnel.specialites.map((s: { nom: string }) => s.nom).join(", ")
+                          ? personnel.specialites
+                              .map((s: { nom: string }) => s.nom)
+                              .join(", ")
                           : "Aucune spécialité"}
                       </td>
                       <td className="flex gap-2 flex-col">
@@ -121,15 +148,31 @@ const Page = () => {
                   ))}
                 </tbody>
               </table>
-            ) : (
-              <EmptyState
-                message={"Aucun employé créé"}
-                IconComponent="Group"
-              />
-            )}
+            </div>
+              <div className="flex justify-start items-center mt-4 gap-x-4">
+                <button
+                  className="btn btn-sm"
+                  onClick={handlePreviousPage}
+                  disabled={currentPage === 1}
+                >
+                  Précédent
+                </button>
+                <span className="text-sm">
+                  Page {currentPage} sur {totalPages}
+                </span>
+                <button
+                  className="btn btn-sm"
+                  onClick={handleNextPage}
+                  disabled={currentPage === totalPages}
+                >
+                  Suivant
+                </button>
+              </div>
           </div>
         </div>
-      </div>
+      ) : (
+        <EmptyState message={"Aucun employé créé"} IconComponent="Group" />
+      )}
     </Wrapper>
   );
 };

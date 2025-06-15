@@ -18,9 +18,11 @@ const Page = () => {
   const [specialiteNom, setSpecialiteNom] = useState("");
   const [motdepasse, setMotdepasse] = useState("");
   const [photo, setPhoto] = useState<File | null>(null);
+  const [loading, setLoading] = useState(false);
 
   // Fonction de création d'employé
   const handleCreateEmploye = async () => {
+    setLoading(true); 
     if (!nom || !personnelEmail || !role) {
       toast.error("Veuillez remplir les champs obligatoires.");
       return;
@@ -49,6 +51,7 @@ const Page = () => {
       } else {
         const { error } = await response.json();
         toast.error(error || "Erreur lors de l'envoi.");
+        setLoading(false); 
       }
     } catch (err) {
       console.error(err);
@@ -133,7 +136,7 @@ const Page = () => {
                 }}
               />
 
-              <button className="btn btn-primary" onClick={handleCreateEmploye}>
+              <button className="btn btn-primary" onClick={handleCreateEmploye} disabled={loading}>
                 Inviter l'employé
               </button>
             </div>
