@@ -80,8 +80,10 @@ export interface Patient  {
   nom: string;
   prenom: string;
   age: string;
+  telephone: string;
   adresse: string;
   nombreConsultationsConfirmees: number;
+  soins: string[];
   agendas: Agenda[];
 };
 

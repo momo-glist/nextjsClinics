@@ -169,7 +169,7 @@ const RdvPage = () => {
           setModalOpen(true);
         } else {
           setModalOpen(false);
-          setRdvsDepasses([]); 
+          setRdvsDepasses([]);
         }
       } catch (error) {
         console.error("Erreur fetch RDVs dépassés :", error);
@@ -267,52 +267,66 @@ const RdvPage = () => {
                       );
                       return (
                         <td key={`${jour}-${heure}`} className="align-top">
-                          {rdv ? (
-                            utilisateur.role === "MEDECIN" ? (
-                              <Link href={`/patient/${rdv.patientId}`}>
-                                <div
-                                  className={`rounded-xl p-3 ${rdv.couleur} shadow-sm cursor-pointer hover:shadow-md transition`}
-                                >
-                                  <div className="flex items-center gap-2 font-medium mb-1">
-                                    {rdv.icone}
-                                    <span className="text-sm">{rdv.type}</span>
-                                  </div>
-                                  <div className="text-xs text-gray-700">
-                                    {rdv.patient}
-                                  </div>
+                          <div className="flex flex-col md:w-[140px] gap-2">
+                            {rendezVous
+                              .filter(
+                                (r) => r.heure === heure && r.jour === jour
+                              )
+                              .map((rdv, index) => (
+                                <div key={index}>
+                                  {utilisateur.role === "MEDECIN" ? (
+                                    <Link href={`/patient/${rdv.patientId}`}>
+                                      <div
+                                        className={`rounded-xl p-3 ${rdv.couleur} shadow-sm cursor-pointer hover:shadow-md transition`}
+                                      >
+                                        <div className="flex items-center gap-2 font-medium mb-1">
+                                          {rdv.icone}
+                                          <span className="text-sm">
+                                            {rdv.type}
+                                          </span>
+                                        </div>
+                                        <div className="text-xs text-gray-700">
+                                          {rdv.patient}
+                                        </div>
+                                      </div>
+                                    </Link>
+                                  ) : utilisateur.role === "INFIRMIER" ? (
+                                    <Link
+                                      href={`/patient/update/${rdv.patientId}`}
+                                    >
+                                      <div
+                                        className={`rounded-xl p-3 ${rdv.couleur} shadow-sm cursor-pointer hover:shadow-md transition`}
+                                      >
+                                        <div className="flex items-center gap-2 font-medium mb-1">
+                                          {rdv.icone}
+                                          <span className="text-sm">
+                                            {rdv.type}
+                                          </span>
+                                        </div>
+                                        <div className="text-xs text-gray-700">
+                                          {rdv.patient}
+                                        </div>
+                                      </div>
+                                    </Link>
+                                  ) : (
+                                    <div
+                                      onClick={() => {}}
+                                      className={`rounded-xl p-3 ${rdv.couleur} shadow-sm cursor-pointer hover:shadow-md transition`}
+                                    >
+                                      <div className="flex items-center gap-2 font-medium mb-1">
+                                        {rdv.icone}
+                                        <span className="text-sm">
+                                          {rdv.type}
+                                        </span>
+                                      </div>
+                                      <div className="text-xs text-gray-700">
+                                        {rdv.patient}
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
-                              </Link>
-                            ) : utilisateur.role === "INFIRMIER" ? (
-                              <Link href={`/patient/update/${rdv.patientId}`}>
-                                <div
-                                  className={`rounded-xl p-3 ${rdv.couleur} shadow-sm cursor-pointer hover:shadow-md transition`}
-                                >
-                                  <div className="flex items-center gap-2 font-medium mb-1">
-                                    {rdv.icone}
-                                    <span className="text-sm">{rdv.type}</span>
-                                  </div>
-                                  <div className="text-xs text-gray-700">
-                                    {rdv.patient}
-                                  </div>
-                                </div>
-                              </Link>
-                            ) : (
-                              <div
-                                onClick={() => {}}
-                                className={`rounded-xl p-3 ${rdv.couleur} shadow-sm cursor-pointer hover:shadow-md transition`}
-                              >
-                                <div className="flex items-center gap-2 font-medium mb-1">
-                                  {rdv.icone}
-                                  <span className="text-sm">{rdv.type}</span>
-                                </div>
-                                <div className="text-xs text-gray-700">
-                                  {rdv.patient}
-                                </div>
-                              </div>
-                            )
-                          ) : (
-                            <div className="text-xs text-gray-300 italic"></div>
-                          )}
+                              ))}
+                          </div>
                         </td>
                       );
                     })}

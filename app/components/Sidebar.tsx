@@ -49,7 +49,7 @@ const Sidebar = () => {
     {
       href: "/patients",
       label: "Patients",
-      icon: CalendarClock,
+      icon: Users,
       requiredModules: [],
       allowedRoles: ["ADMIN"],
     },

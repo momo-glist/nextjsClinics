@@ -7,6 +7,7 @@ import { Patient } from "../type";
 import { toast } from "react-toastify";
 import EmptyState from "../components/EmptyState";
 import { Eye } from "lucide-react";
+import PatientModal from "../components/PatientModal";
 
 const page = () => {
   const { user } = useUser();
@@ -15,11 +16,14 @@ const page = () => {
   const [prenom, setPrenom] = useState("");
   const [nom, setNom] = useState("");
   const [age, setAge] = useState("");
+  const [phone, setPhone] = useState("");
   const [adresse, setAdresse] = useState("");
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [patient, setpatient] = useState<Patient[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [soins, setSoins] = useState<string[]>([]);
 
   useEffect(() => {
     const fetchPatient = async () => {
@@ -39,23 +43,39 @@ const page = () => {
     setNom(patient.nom);
     setPrenom(patient.prenom);
     setAge(patient.age);
+    setPhone(patient.telephone);
     setAdresse(patient.adresse);
     setEditingId(patient.id);
-    (
-      document.getElementById("quantite_modal") as HTMLDialogElement
-    )?.showModal();
+    setSoins(patient.soins || []);
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
   };
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  // Filtrage des patients
+  const filteredPatients = patient.filter((p) => {
+    const fullName = `${p.prenom} ${p.nom}`.toLowerCase();
+    const search = searchTerm.toLowerCase();
 
-  // Calcul des patients à afficher
+    return (
+      fullName.includes(search) || p.telephone?.toLowerCase().includes(search)
+    );
+  });
+
+  // Pagination sur les résultats filtrés
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentPatients = patient.slice(indexOfFirstItem, indexOfLastItem);
+  const currentPatients = filteredPatients.slice(
+    indexOfFirstItem,
+    indexOfLastItem
+  );
 
-  // Nombre total de pages
-  const totalPages = Math.ceil(patient.length / itemsPerPage);
+  // Mise à jour du total de pages basé sur les résultats filtrés
+  const totalPages = Math.ceil(filteredPatients.length / itemsPerPage);
 
   const handleNextPage = () => {
     if (currentPage < totalPages) {
@@ -94,6 +114,7 @@ const page = () => {
                   <th>Nom</th>
                   <th>Age</th>
                   <th>Adresse</th>
+                  <th>Téléphone</th>
                   <th>Nombre de consultations</th>
                   <th>Vue sur le patient</th>
                 </tr>
@@ -104,6 +125,7 @@ const page = () => {
                     <td>{indexOfFirstItem + index + 1}</td>
                     <td>{`${patient.prenom} ${patient.nom}`}</td>
                     <td>{patient.age}</td>
+                    <td>{patient.telephone}</td>
                     <td>{patient.adresse}</td>
                     <td>{patient.nombreConsultationsConfirmees}</td>
                     <td>
@@ -142,6 +164,16 @@ const page = () => {
       ) : (
         <EmptyState message={"Aucun patient créé"} IconComponent="Group" />
       )}
+      <PatientModal
+        open={isModalOpen}
+        onCloseAction={() => setIsModalOpen(false)}
+        nom={nom}
+        prenom={prenom}
+        age={age}
+        phone={phone}
+        adresse={adresse}
+        soins={soins}
+      />
     </Wrapper>
   );
 };

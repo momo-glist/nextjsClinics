@@ -29,7 +29,6 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Récupérer les patients de cette clinique uniquement
     const patients = await prisma.patient.findMany({
       where: {
         cliniqueId: user.cliniqueId,
@@ -47,6 +46,15 @@ export async function GET(req: NextRequest) {
           },
           select: {
             id: true,
+            agendaSoins: {
+              select: {
+                soin: {
+                  select: {
+                    nom: true,
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -55,16 +63,22 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    // Formater les résultats
-    const results = patients.map((patient) => ({
-      id: patient.id,
-      nom: patient.nom,
-      prenom: patient.prenom,
-      age: patient.age,
-      telephone: patient.telephone,
-      adresse: patient.adresse,
-      nombreConsultationsConfirmees: patient.agendas.length,
-    }));
+    const results = patients.map((patient) => {
+      const soins = patient.agendas.flatMap((agenda) =>
+        agenda.agendaSoins.map((as) => as.soin.nom)
+      );
+
+      return {
+        id: patient.id,
+        nom: patient.nom,
+        prenom: patient.prenom,
+        age: patient.age,
+        telephone: patient.telephone,
+        adresse: patient.adresse,
+        nombreConsultationsConfirmees: patient.agendas.length,
+        soins, 
+      };
+    });
 
     return NextResponse.json(results, { status: 200 });
   } catch (error) {

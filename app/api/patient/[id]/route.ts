@@ -32,7 +32,6 @@ export async function GET(
       );
     }
 
-    // Récupérer le patient sans agendas
     const patient = await prisma.patient.findFirst({
       where: {
         id: params.id,
@@ -53,7 +52,6 @@ export async function GET(
       );
     }
 
-    // Récupérer l'agenda EN_ATTENTE lié au patient
     const agendaEnAttente = await prisma.agenda.findFirst({
       where: {
         patientId: patient.id,
@@ -65,7 +63,7 @@ export async function GET(
         },
       },
       orderBy: {
-        date: "desc", // si tu veux le plus récent
+        date: "desc", 
       },
     });
 

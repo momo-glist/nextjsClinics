@@ -18,6 +18,8 @@ const UpdatePatientPage = () => {
   const [loading, setLoading] = useState(false);
   const [soinsDisponibles, setSoinsDisponibles] = useState<Soin[]>([]);
   const [prixSoins, setPrixSoins] = useState<{ [soinId: string]: number }>({});
+  const [agenda, setAgenda] = useState<any>(null);
+  const [soinsDuRendezVous, setSoinsDuRendezVous] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     nom: "",
     prenom: "",
@@ -64,30 +66,11 @@ const UpdatePatientPage = () => {
 
   const invoiceRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const fetchSoins = async () => {
-      try {
-        const res = await fetch("/api/soins");
-        const data = await res.json();
-        setSoinsDisponibles(data);
-      } catch (error) {
-        console.error("Erreur lors du chargement des soins", error);
-      }
-    };
+    if (!patient || !agenda || soinsDuRendezVous.length === 0) return;
 
-    fetchSoins();
-  }, []);
-
-  const fetchPatient = async () => {
-    const res = await fetch(`/api/patient/${id}`);
-    const data = await res.json();
-    setPatient(data);
-  };
-
-  useEffect(() => {
-    if (!patient || !patient.agendas || patient.agendas.length === 0) return;
-
-    const agenda = patient.agendas[0];
     const vitaux = patient.parametresVitaux?.[0];
+
+    const nouveauxSoins = soinsDuRendezVous.map((as) => as.soin.id);
 
     setFormData({
       nom: patient.nom || "",
@@ -98,18 +81,31 @@ const UpdatePatientPage = () => {
       temperature: vitaux?.temperature?.toString() || "",
       tension: vitaux?.tension || "",
       poids: vitaux?.poids?.toString() || "",
-      date: agenda.date
-        ? new Date(agenda.date).toISOString().slice(0, 16)
-        : "",
-      soins: agenda.agendaSoins?.map((as: any) => as.soin.id) || [],
+      date: agenda.date ? new Date(agenda.date).toISOString().slice(0, 16) : "",
+      soins: nouveauxSoins,
     });
 
     const prixMap: { [id: string]: number } = {};
-    agenda.agendaSoins?.forEach((as: any) => {
+    soinsDuRendezVous.forEach((as) => {
       prixMap[as.soin.id] = as.soin.prix;
     });
     setPrixSoins(prixMap);
-  }, [patient]);
+  }, [patient, agenda, soinsDuRendezVous]);
+
+  console.log("soinsDisponibles :", soinsDisponibles);
+  console.log("formData.soins :", formData.soins);
+
+  const fetchPatient = async () => {
+    const res = await fetch(`/api/patient/${id}`);
+    const data = await res.json();
+    console.log("data patient complet:", data);
+    if (data.agendaEnAttente?.agendaSoins) {
+      setSoinsDuRendezVous(data.agendaEnAttente.agendaSoins);
+    }
+
+    setPatient(data.patient);
+    setAgenda(data.agendaEnAttente);
+  };
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -119,6 +115,14 @@ const UpdatePatientPage = () => {
       setFormData({ ...formData, [name]: value });
     }
   };
+
+  useEffect(() => {
+    console.log("patient chargé :", patient);
+  }, [patient]);
+
+  useEffect(() => {
+    console.log("formData mis à jour :", formData);
+  }, [formData]);
 
   // ✅ Fonctions de validation
   const isValidTension = (tension: string) => {
@@ -235,7 +239,7 @@ const UpdatePatientPage = () => {
           <div
             className={`${loading ? "blur-[1px] pointer-events-none select-none" : ""}`}
           >
-            <h2 className="text-2xl font-bold mb-6">Ajouter un patient</h2>
+            <h2 className="text-2xl font-bold mb-6">Modifier le patient</h2>
 
             <form
               className="grid grid-cols-1 md:grid-cols-2 gap-4"
@@ -324,37 +328,32 @@ const UpdatePatientPage = () => {
                 onChange={handleChange}
               />
 
-              {/* Recherche et sélection des soins */}
-
               {/* Soins sélectionnés avec champ prix */}
-              {formData.soins.length > 0 &&
-                formData.soins.map((soinId) => {
-                  const soin = soinsDisponibles.find((s) => s.id === soinId);
-                  return (
-                    <div
-                      key={soinId}
-                      className="flex flex-col md:flex-row gap-2 items-center col-span-full"
-                    >
-                      <label className="w-full md:w-1/2 font-medium">
-                        Prix du soin : {soin?.nom}
-                      </label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        className="input input-bordered w-full md:w-1/2"
-                        value={prixSoins[soinId] ?? ""}
-                        onChange={(e) => {
-                          const value = parseFloat(e.target.value) || 0;
-                          setPrixSoins((prev) => ({
-                            ...prev,
-                            [soinId]: value,
-                          }));
-                        }}
-                        min={0}
-                      />
-                    </div>
-                  );
-                })}
+              {soinsDuRendezVous.length > 0 &&
+                soinsDuRendezVous.map(({ soin }) => (
+                  <div
+                    key={soin.id}
+                    className="flex flex-col md:flex-row gap-2 items-center col-span-full"
+                  >
+                    <label className="w-full md:w-1/2 font-medium">
+                      Prix du soin : {soin.nom}
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      className="input input-bordered w-full md:w-1/2"
+                      value={prixSoins[soin.id] ?? ""}
+                      onChange={(e) => {
+                        const value = parseFloat(e.target.value) || 0;
+                        setPrixSoins((prev) => ({
+                          ...prev,
+                          [soin.id]: value,
+                        }));
+                      }}
+                      min={0}
+                    />
+                  </div>
+                ))}
               <div className="col-span-full flex justify-end">
                 <button
                   type="submit"
@@ -385,10 +384,15 @@ const UpdatePatientPage = () => {
             prenom={formData.prenom}
             adresse={formData.adresse}
             date={formData.date}
-            soins={formData.soins.map((id) => ({
-              nom: soinsDisponibles.find((s) => s.id === id)?.nom || "",
-              prix: prixSoins[id] || 0,
-            }))}
+            soins={formData.soins.map((id) => {
+              const soinTrouve = soinsDuRendezVous.find(
+                (s) => s.soin.id === id
+              );
+              return {
+                nom: soinTrouve?.soin.nom || "",
+                prix: prixSoins[id] || 0,
+              };
+            })}
             clinique={clinique}
           />
         </div>
