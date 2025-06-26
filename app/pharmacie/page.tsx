@@ -161,7 +161,6 @@ const Page = () => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* LineChart - Évolution des ventes */}
               <div className="mt-10">
                 <h2 className="text-xl font-semibold mb-4">
                   Évolution des ventes
@@ -172,7 +171,7 @@ const Page = () => {
                     <YAxis />
                     <Tooltip />
                     <Legend />
-                    <Line type="monotone" dataKey="total" stroke="none" />
+                    <Line type="monotone" dataKey="total" stroke="#10B981" />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -186,7 +185,7 @@ const Page = () => {
                     <Tooltip />
                     <Bar
                       dataKey="quantite"
-                      fill="#16a34a"
+                      fill="#10B981"
                       radius={[8, 8, 8, 8]}
                       stroke="none"
                     />

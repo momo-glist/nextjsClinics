@@ -10,6 +10,7 @@ import {
   endOfYear,
 } from "date-fns";
 import { fr } from "date-fns/locale";
+import { format } from "date-fns";
 
 export async function GET(req: Request) {
   try {
@@ -41,7 +42,8 @@ export async function GET(req: Request) {
         break;
     }
 
-    const dateFilter = startDate && endDate ? { gte: startDate, lte: endDate } : undefined;
+    const dateFilter =
+      startDate && endDate ? { gte: startDate, lte: endDate } : undefined;
 
     // Récupération des ventes et achats sur la période
     const [ventes, achats, faibleStock] = await Promise.all([
@@ -87,7 +89,10 @@ export async function GET(req: Request) {
     const panierMoyen = ventes.length > 0 ? chiffreDaffaire / ventes.length : 0;
 
     // Total des achats
-    const totalAchat = achats.reduce((sum, a) => sum + a.quantite * a.prix_unitaire, 0);
+    const totalAchat = achats.reduce(
+      (sum, a) => sum + a.quantite * a.prix_unitaire,
+      0
+    );
 
     // Nombre de ventes
     const nombreDeVentes = ventes.length;
@@ -98,7 +103,10 @@ export async function GET(req: Request) {
     }, 0);
 
     // Top ventes (déjà présent dans ton code)
-    const venteParMedicament: Record<string, { nom: string; quantite: number }> = {};
+    const venteParMedicament: Record<
+      string,
+      { nom: string; quantite: number }
+    > = {};
 
     ventes.forEach((vente) => {
       vente.detailVentes.forEach((detail) => {
@@ -129,7 +137,22 @@ export async function GET(req: Request) {
     // Évolution des ventes par jour (pour graphique)
     const ventesParDate: Record<string, number> = {};
     ventes.forEach((vente) => {
-      const dateKey = vente.date_vente.toISOString().split("T")[0]; // YYYY-MM-DD
+      let dateKey: string;
+
+      switch (periode) {
+        case "annee":
+          dateKey = format(vente.date_vente, "MMM", { locale: fr }); // janv, févr, ...
+          break;
+        case "mois":
+          dateKey = format(vente.date_vente, "dd MMM", { locale: fr }); // 01 janv, ...
+          break;
+        case "semaine":
+          dateKey = format(vente.date_vente, "EEEE", { locale: fr }); // lundi, mardi...
+          break;
+        default:
+          dateKey = format(vente.date_vente, "yyyy-MM-dd"); // fallback
+      }
+
       ventesParDate[dateKey] = (ventesParDate[dateKey] || 0) + vente.total;
     });
 

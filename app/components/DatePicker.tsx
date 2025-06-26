@@ -10,33 +10,32 @@ type Props = {
 };
 
 export default function DatePickerAgenda({ date, setDate }: Props) {
-  const [excludedTimes, setExcludedTimes] = useState<Date[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | null>(
     date ? new Date(date) : null
   );
 
-  useEffect(() => {
-    if (selectedDate) {
-      const dateOnly = selectedDate.toISOString().split("T")[0];
+  // useEffect(() => {
+  //   if (selectedDate) {
+  //     const dateOnly = selectedDate.toISOString().split("T")[0];
 
-      fetch(`/api/agenda?date=${dateOnly}`)
-        .then((res) => res.json())
-        .then((data) => {
-          if (Array.isArray(data?.times)) {
-            const excluded = data.times.map((t: string) => new Date(t));
-            setExcludedTimes(excluded);
-          } else {
-            setExcludedTimes([]);
-          }
-        })
-        .catch((err) => {
-          console.error("Erreur lors de la récupération des heures :", err);
-          setExcludedTimes([]);
-        });
-    } else {
-      setExcludedTimes([]);
-    }
-  }, [selectedDate]);
+  //     fetch(`/api/agenda?date=${dateOnly}`)
+  //       .then((res) => res.json())
+  //       .then((data) => {
+  //         if (Array.isArray(data?.times)) {
+  //           const excluded = data.times.map((t: string) => new Date(t));
+  //           setExcludedTimes(excluded);
+  //         } else {
+  //           setExcludedTimes([]);
+  //         }
+  //       })
+  //       .catch((err) => {
+  //         console.error("Erreur lors de la récupération des heures :", err);
+  //         setExcludedTimes([]);
+  //       });
+  //   } else {
+  //     setExcludedTimes([]);
+  //   }
+  // }, [selectedDate]);
 
   return (
     <div className="my-4">
@@ -53,7 +52,6 @@ export default function DatePickerAgenda({ date, setDate }: Props) {
         dateFormat="Pp"
         placeholderText="Choisissez une date et heure"
         className="input input-bordered w-full"
-        excludeTimes={excludedTimes}
         minDate={new Date()}
       />
     </div>

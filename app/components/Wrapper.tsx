@@ -34,7 +34,6 @@ const Wrapper = ({ children }: WrapperProps) => {
         </div>
       </div>
 
-      {/* Sidebar : drawer-side */}
       <div className="drawer-side bg-transparent backdrop-blur-md">
         <label
           htmlFor="my-drawer"

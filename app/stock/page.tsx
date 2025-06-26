@@ -13,6 +13,11 @@ const page = () => {
   const { user } = useUser();
   const email = user?.primaryEmailAddress?.emailAddress as string;
   const router = useRouter();
+  const [prixAchat, setPrixAchat] = useState("");
+  const [prixVente, setPrixVente] = useState("");
+  const [fournisseur, setFournisseur] = useState("");
+  const [datePeremption, setDatePeremption] = useState("");
+  const [dateAchat, setDateAchat] = useState("");
   const [nom, setNom] = useState("");
   const [quantite, setQuantite] = useState("");
   const [loading, setLoading] = useState(false);
@@ -61,15 +66,17 @@ const page = () => {
   };
 
   const handleIncreaseQuantite = async () => {
-    if (!nom || !quantite) {
+    if (
+      !nom ||
+      !quantite ||
+      !prixAchat ||
+      !prixVente ||
+      !fournisseur ||
+      !datePeremption ||
+      !dateAchat ||
+      !editingQuantite
+    ) {
       toast.error("Veuillez remplir tous les champs.");
-      return;
-    }
-
-    if (!editingQuantite) {
-      toast.error(
-        "Aucun médicament sélectionnée pour l'augmentation de la quantité'."
-      );
       return;
     }
 
@@ -77,30 +84,29 @@ const page = () => {
 
     try {
       const res = await fetch("/api/stock", {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          id: editingQuantite,
-          nom,
-          quantite,
+          medicamentId: editingQuantite,
+          quantite: Number(quantite),
+          prix_unitaire: Number(prixAchat),
+          prix_vente: Number(prixVente),
+          fournisseur,
+          date_peremption: datePeremption,
+          date_achat: dateAchat,
         }),
       });
 
       if (!res.ok) {
         const errorData = await res.json();
-        throw new Error(
-          errorData.error ||
-            "Erreur lors de l'augmentation de la quantité du médicament'."
-        );
+        throw new Error(errorData.error || "Erreur lors de l’ajout.");
       }
 
-      toast.success("Quantité augmenté avec succès !");
+      toast.success("Stock mis à jour avec succès !");
       closeModal();
-    } catch (error: any) {
-      console.error(error);
-      toast.error(error.message || "Une erreur est survenue.");
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Une erreur est survenue.");
     } finally {
       setLoading(false);
     }
@@ -170,7 +176,7 @@ const page = () => {
                     <th>Dosage</th>
                     <th>Quantité</th>
                     <th>Prix unitaire</th>
-                    <th>Augmebter le stock</th>
+                    <th>Augmenter le stock</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -230,11 +236,20 @@ const page = () => {
       <StockIncreaseModal
         nom={nom}
         quantite={quantite}
-        onChangeNom={setNom}
-        onChangeQuantite={setQuantite}
-        onSubmit={handleIncreaseQuantite}
-        onclose={closeModal}
+        prixAchat={prixAchat}
+        prixVente={prixVente}
+        fournisseur={fournisseur}
+        datePeremption={datePeremption}
+        dateAchat={dateAchat}
         loading={loading}
+        onclose={closeModal}
+        onChangeQuantite={setQuantite}
+        onChangePrixAchat={setPrixAchat}
+        onChangePrixVente={setPrixVente}
+        onChangeFournisseur={setFournisseur}
+        onChangeDatePeremption={setDatePeremption}
+        onChangeDateAchat={setDateAchat}
+        onSubmit={handleIncreaseQuantite}
       />
     </Wrapper>
   );

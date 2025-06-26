@@ -102,6 +102,14 @@ export async function POST(req: Request) {
           catalogueMedId: catalogue.id,
         },
       });
+    } else {
+      // Mettre à jour le prix si différent
+      if (medicament.prix !== prix) {
+        await prisma.medicament.update({
+          where: { id: medicament.id },
+          data: { prix },
+        });
+      }
     }
 
     // 5. Enregistrer l’achat (HistoriqueAchat)
@@ -109,7 +117,7 @@ export async function POST(req: Request) {
       data: {
         quantite,
         prix_unitaire,
-        date_achat: new Date(),
+        date_achat: new Date(body.date_achat || Date.now()),
         medicamentId: medicament.id,
         cliniqueId,
       },
@@ -159,7 +167,6 @@ export async function GET(req: Request) {
       );
     }
 
-
     const medicaments = await prisma.medicament.findMany({
       where: {
         cliniqueId: user.cliniqueId,
@@ -203,13 +210,19 @@ export async function PATCH(req: Request) {
     });
 
     if (!medicament) {
-      return NextResponse.json({ error: "Médicament introuvable" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Médicament introuvable" },
+        { status: 404 }
+      );
     }
 
     // Récupérer le premier lot de stock existant
     const lot = medicament.stockLots[0];
     if (!lot) {
-      return NextResponse.json({ error: "Aucun lot de stock trouvé pour ce médicament" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Aucun lot de stock trouvé pour ce médicament" },
+        { status: 404 }
+      );
     }
 
     // Mise à jour de la quantité
@@ -228,4 +241,3 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }
-

@@ -19,7 +19,6 @@ export default async function HomePage() {
     redirect("/unauthorized");
   }
 
-  // Redirection en fonction du rôle
   switch (user.role) {
     case "MEDECIN":
     case "INFIRMIER":
@@ -32,7 +31,6 @@ export default async function HomePage() {
       redirect("/charges");
       break;
     case "ADMIN":
-      // Ne rien faire, on affiche le dashboard
       break;
     default:
       redirect("/unauthorized");

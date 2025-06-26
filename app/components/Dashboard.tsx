@@ -23,12 +23,36 @@ import {
 } from "lucide-react";
 import EmptyState from "./EmptyState";
 import { useEffect, useState } from "react";
-import { DashboardStats } from "../type";
+import { DashboardStats, Utilisateur } from "../type";
 
 export default function DashboardClient() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [selectedPeriod, setSelectedPeriod] = useState("semaine");
+  const [currentWeekOffset, setCurrentWeekOffset] = useState(0);
+  const [utilisateur, setUtilisateur] = useState<Utilisateur | null>(null);
+
+    useEffect(() => {
+      const fetchUtilisateur = async () => {
+        try {
+          const res = await fetch("/api/user");
+          const data = await res.json();
+  
+          if (res.ok) {
+            setUtilisateur(data);
+          } else {
+            console.error("Erreur utilisateur :", data?.error || data);
+          }
+        } catch (error) {
+          console.error(
+            "Erreur lors de la récupération de l'utilisateur :",
+            error
+          );
+        }
+      };
+  
+      fetchUtilisateur();
+    }, []);
 
   useEffect(() => {
     const fetchStats = async () => {
