@@ -171,8 +171,13 @@ export interface Stock {
   forme: string;
   dosage_valeur: number | string;
   dosage_unite: string;
+  codeBar: string;
+  fournisseur: string;
+  prixAchat: number;
   prix: number;
   quantite: number;
+  dateAchat: string;
+  datePeremption: string;
 }
 
 

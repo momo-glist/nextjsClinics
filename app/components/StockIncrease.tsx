@@ -2,10 +2,14 @@ import React from "react";
 
 interface Props {
   nom: string;
+  forme: string;
+  dosage_valeur: string;
+  dosage_unite: string;
   quantite: string;
   prixAchat: string;
   prixVente: string;
   fournisseur: string;
+  codeBar: string;
   datePeremption: string;
   dateAchat: string;
   loading: boolean;
@@ -14,6 +18,7 @@ interface Props {
   onChangePrixAchat: (value: string) => void;
   onChangePrixVente: (value: string) => void;
   onChangeFournisseur: (value: string) => void;
+  onChangeCodeBar: (value: string) => void;
   onChangeDatePeremption: (value: string) => void;
   onChangeDateAchat: (value: string) => void;
   onSubmit: () => void;
@@ -21,11 +26,15 @@ interface Props {
 
 const StockIncreaseModal: React.FC<Props> = ({
   nom,
+  forme,
+  dosage_valeur,
+  dosage_unite,
   quantite,
   prixAchat,
   prixVente,
   dateAchat,
   fournisseur,
+  codeBar,
   datePeremption,
   loading,
   onclose,
@@ -34,6 +43,7 @@ const StockIncreaseModal: React.FC<Props> = ({
   onChangePrixVente,
   onChangeDateAchat,
   onChangeFournisseur,
+  onChangeCodeBar,
   onChangeDatePeremption,
   onSubmit,
 }) => {
@@ -57,6 +67,36 @@ const StockIncreaseModal: React.FC<Props> = ({
         <input
           type="text"
           value={nom}
+          readOnly
+          className="input input-bordered w-full mb-3"
+        />
+
+        <label className="label">
+          <span className="label-text font-semibold">Forme</span>
+        </label>
+        <input
+          type="text"
+          value={forme}
+          readOnly
+          className="input input-bordered w-full mb-3"
+        />
+
+        <label className="label">
+          <span className="label-text font-semibold">Dosage</span>
+        </label>
+        <input
+          type="text"
+          value={dosage_valeur}
+          readOnly
+          className="input input-bordered w-full mb-3"
+        />
+
+        <label className="label">
+          <span className="label-text font-semibold">Unité</span>
+        </label>
+        <input
+          type="text"
+          value={dosage_unite}
           readOnly
           className="input input-bordered w-full mb-3"
         />
@@ -120,6 +160,17 @@ const StockIncreaseModal: React.FC<Props> = ({
           placeholder="Ex : Laborex"
           value={fournisseur}
           onChange={(e) => onChangeFournisseur(e.target.value)}
+          className="input input-bordered w-full mb-3"
+        />
+
+        <label className="label">
+          <span className="label-text font-semibold">Code Bare</span>
+        </label>
+        <input
+          type="text"
+          placeholder="Ex : Laborex"
+          value={codeBar}
+          onChange={(e) => onChangeCodeBar(e.target.value)}
           className="input input-bordered w-full mb-3"
         />
 

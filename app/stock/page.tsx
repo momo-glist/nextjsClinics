@@ -13,15 +13,6 @@ const page = () => {
   const { user } = useUser();
   const email = user?.primaryEmailAddress?.emailAddress as string;
   const router = useRouter();
-  const [prixAchat, setPrixAchat] = useState("");
-  const [prixVente, setPrixVente] = useState("");
-  const [fournisseur, setFournisseur] = useState("");
-  const [datePeremption, setDatePeremption] = useState("");
-  const [dateAchat, setDateAchat] = useState("");
-  const [nom, setNom] = useState("");
-  const [quantite, setQuantite] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [editingQuantite, setEditingQuantite] = useState<string | null>(null);
   const [stock, setStock] = useState<Stock[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -49,68 +40,6 @@ const page = () => {
 
     fetchStock();
   }, []);
-
-  const openCreateModal = (stock: Stock) => {
-    setNom(stock.nom);
-    setQuantite("");
-    setEditingQuantite(stock.id);
-    (
-      document.getElementById("quantite_modal") as HTMLDialogElement
-    )?.showModal();
-  };
-
-  const closeModal = () => {
-    setNom("");
-    setQuantite("");
-    (document.getElementById("quantite_modal") as HTMLDialogElement)?.close();
-  };
-
-  const handleIncreaseQuantite = async () => {
-    if (
-      !nom ||
-      !quantite ||
-      !prixAchat ||
-      !prixVente ||
-      !fournisseur ||
-      !datePeremption ||
-      !dateAchat ||
-      !editingQuantite
-    ) {
-      toast.error("Veuillez remplir tous les champs.");
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const res = await fetch("/api/stock", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          medicamentId: editingQuantite,
-          quantite: Number(quantite),
-          prix_unitaire: Number(prixAchat),
-          prix_vente: Number(prixVente),
-          fournisseur,
-          date_peremption: datePeremption,
-          date_achat: dateAchat,
-        }),
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || "Erreur lors de l’ajout.");
-      }
-
-      toast.success("Stock mis à jour avec succès !");
-      closeModal();
-    } catch (err: any) {
-      console.error(err);
-      toast.error(err.message || "Une erreur est survenue.");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const getQuantiteClass = (quantite: number) => {
     if (quantite <= 10) return "bg-red-200 text-red-800 font-bold";
@@ -199,7 +128,9 @@ const page = () => {
                         <td>
                           <button
                             className="btn btn-xs w-fit btn-primary"
-                            onClick={() => openCreateModal(stock)}
+                            onClick={() =>
+                              router.push(`/update-stock/${stock.id}`)
+                            }
                           >
                             <SquarePlus className="w-4 h-4" />
                           </button>
@@ -233,24 +164,6 @@ const page = () => {
       ) : (
         <EmptyState message={"Aucun médicament créé"} IconComponent="Group" />
       )}
-      <StockIncreaseModal
-        nom={nom}
-        quantite={quantite}
-        prixAchat={prixAchat}
-        prixVente={prixVente}
-        fournisseur={fournisseur}
-        datePeremption={datePeremption}
-        dateAchat={dateAchat}
-        loading={loading}
-        onclose={closeModal}
-        onChangeQuantite={setQuantite}
-        onChangePrixAchat={setPrixAchat}
-        onChangePrixVente={setPrixVente}
-        onChangeFournisseur={setFournisseur}
-        onChangeDatePeremption={setDatePeremption}
-        onChangeDateAchat={setDateAchat}
-        onSubmit={handleIncreaseQuantite}
-      />
     </Wrapper>
   );
 };
