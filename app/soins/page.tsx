@@ -43,6 +43,7 @@ const page = () => {
       try {
         const res = await fetch("/api/soins");
         const data = await res.json();
+        console.log(data)
         setSoins(data);
       } catch (error) {
         toast.error("Erreur lors du chargement des soins");

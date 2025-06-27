@@ -68,15 +68,13 @@ export async function GET() {
     }
 
     // Récupérer l'utilisateur et sa clinique
-    const currentUser = await prisma.user.findUnique({
-      where: { supabaseUserId: userId },
+    const currentUser = await prisma.user.findFirst({
+      where: {
+        OR: [{ supabaseUserId: userId }, { id: userId }],
+      },
       select: {
-        id: true,
-        clinique: {
-          select: {
-            id: true,
-          },
-        },
+        clinique: true,
+        role: true,
       },
     });
 

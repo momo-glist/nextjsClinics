@@ -33,7 +33,7 @@ const page = () => {
         setpatient(rawData);
       } catch (error) {
         toast.error("Erreur lors du chargement des patients");
-        console.error(error);
+        console.log(error);
       }
     };
     fetchPatient();

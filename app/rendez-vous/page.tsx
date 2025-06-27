@@ -90,10 +90,10 @@ const RdvPage = () => {
           setUtilisateur(data);
           fetchWeekAgendas(currentWeekOffset, data);
         } else {
-          console.error("Erreur utilisateur :", data?.error || data);
+          console.log("Erreur utilisateur :", data?.error || data);
         }
       } catch (error) {
-        console.error(
+        console.log(
           "Erreur lors de la récupération de l'utilisateur :",
           error
         );
@@ -121,13 +121,13 @@ const RdvPage = () => {
       const res = await fetch(`/api/patient?start=${startISO}&end=${endISO}`);
 
       if (!res.ok) {
-        console.error("Erreur API :", await res.json());
+        console.log("Erreur API :", await res.json());
         return;
       }
 
       const data = await res.json();
       if (!Array.isArray(data)) {
-        console.error("La réponse attendue n'est pas un tableau :", data);
+        console.log("La réponse attendue n'est pas un tableau :", data);
         return;
       }
 
@@ -159,7 +159,7 @@ const RdvPage = () => {
       try {
         const resDepasses = await fetch("/api/agenda/rdvs-passes");
         if (!resDepasses.ok) {
-          console.error("Erreur API RDVs dépassés :", await resDepasses.json());
+          console.log("Erreur API RDVs dépassés :", await resDepasses.json());
           return;
         }
 
@@ -172,10 +172,10 @@ const RdvPage = () => {
           setRdvsDepasses([]);
         }
       } catch (error) {
-        console.error("Erreur fetch RDVs dépassés :", error);
+        console.log("Erreur fetch RDVs dépassés :", error);
       }
     } catch (error) {
-      console.error("Erreur fetchAgendasForWeek :", error);
+      console.log("Erreur fetchAgendasForWeek :", error);
     }
   }
 
